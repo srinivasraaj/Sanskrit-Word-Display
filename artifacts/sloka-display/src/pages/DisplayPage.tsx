@@ -444,11 +444,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <Button onClick={() => markersFileInputRef.current?.click()} variant="ghost" size="sm" className="text-blue-500 hover:text-blue-700">
               <Upload className="w-4 h-4 mr-1" /> Load Markers
             </Button>
-            {timestamps.length > 0 && (
-              <Button onClick={downloadMarkers} variant="ghost" size="sm" className="text-green-600 hover:text-green-800">
-                <Download className="w-4 h-4 mr-1" /> Save Markers
-              </Button>
-            )}
+            <Button onClick={downloadMarkers} variant="ghost" size="sm"
+              disabled={timestamps.length === 0}
+              className="text-green-600 hover:text-green-800 disabled:opacity-40">
+              <Download className="w-4 h-4 mr-1" /> Save Markers
+            </Button>
             {timingIndex >= localItems.length && (
               <Button onClick={goToPlayback} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
                 <CheckCircle className="w-4 h-4 mr-1" /> Done — Preview
