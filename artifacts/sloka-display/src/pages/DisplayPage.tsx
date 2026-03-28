@@ -457,16 +457,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const displayGroupStart = groupStartIndices[displayGroup] ?? 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="bg-gray-50 flex flex-col"
+      style={isRecording ? { position: "fixed", inset: 0, zIndex: 9999 } : { minHeight: "100vh" }}>
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
-          </Button>
-          <span className="text-amber-700 text-xs font-semibold">Step 2: Preview &amp; Export</span>
-          <span className="text-gray-300 text-xs">|</span>
-          <span className="text-gray-500 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
-        </div>
+        {!isRecording && (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
+            </Button>
+            <span className="text-amber-700 text-xs font-semibold">Step 2: Preview &amp; Export</span>
+            <span className="text-gray-300 text-xs">|</span>
+            <span className="text-gray-500 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
+          </div>
+        )}
+        {isRecording && <div />}
 
         <div className="flex items-center gap-2">
           {!isRecording && (
@@ -518,7 +522,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
       </div>
 
-      {audioDuration > 0 && (
+      {!isRecording && audioDuration > 0 && (
         <div className="h-1 bg-gray-200">
           <div className="h-full bg-amber-500 transition-all duration-100"
             style={{ width: `${progress}%` }} />
@@ -583,12 +587,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
       </div>
 
-      <div className="px-4 py-2 bg-white border-t border-gray-200 flex items-center justify-between">
-        <p className="text-gray-400 text-xs">
-          {currentIndex >= 0 ? localItems[currentIndex] : "Waiting for playback…"}
-        </p>
-        <p className="text-gray-400 text-xs">{localItems.length} words · {timestamps.length} timestamps recorded</p>
-      </div>
+      {!isRecording && (
+        <div className="px-4 py-2 bg-white border-t border-gray-200 flex items-center justify-between">
+          <p className="text-gray-400 text-xs">
+            {currentIndex >= 0 ? localItems[currentIndex] : "Waiting for playback…"}
+          </p>
+          <p className="text-gray-400 text-xs">{localItems.length} words · {timestamps.length} timestamps recorded</p>
+        </div>
+      )}
     </div>
   );
 }
