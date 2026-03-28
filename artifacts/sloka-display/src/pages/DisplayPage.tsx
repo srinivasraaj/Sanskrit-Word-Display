@@ -676,7 +676,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex flex-col items-center justify-center px-6 py-4"
-          style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
+          style={{ background: "#ffffff" }}>
           {groups.length > 1 && (
             <p className="text-xs text-amber-400 mb-1">
               {displayGroup + 1} / {groups.length}
