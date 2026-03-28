@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SetupData } from "./SetupPage";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Play, Pause, Download, Video, Square, RotateCcw, CheckCircle, Pencil, X, Check } from "lucide-react";
+import { ArrowLeft, Play, Pause, Download, Video, Square, RotateCcw, CheckCircle, Pencil, X, Check, Upload } from "lucide-react";
 
 interface DisplayPageProps {
   data: SetupData;
@@ -53,6 +53,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const audioEndedInTimingRef = useRef(false);
   const lastActiveRef = useRef(-1);
   const lastAudioTimeUpdateRef = useRef(0);
+  const markersFileInputRef = useRef<HTMLInputElement>(null);
 
   const getTimingDisplayGroup = (idx: number) => {
     let g = 0;
@@ -379,6 +380,45 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     URL.revokeObjectURL(url);
   };
 
+  const downloadMarkers = () => {
+    const payload = {
+      words: localItems,
+      timestamps,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sloka-markers.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const uploadMarkers = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string);
+        if (!Array.isArray(json.timestamps)) throw new Error("Invalid format");
+        const loaded: number[] = json.timestamps;
+        timestampsRef.current = loaded;
+        timingIndexRef.current = loaded.length;
+        setTimestamps(loaded);
+        setTimingIndex(loaded.length);
+        if (json.words && Array.isArray(json.words)) {
+          setLocalItems(json.words);
+          localItemsLenRef.current = json.words.length;
+        }
+      } catch {
+        alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60).toString().padStart(2, "0");
     const sec = (s % 60).toFixed(1).padStart(4, "0");
@@ -436,6 +476,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   ? `Play audio → press  Enter  when you hear "${localItems[timingIndex]}"`
                   : "All words timed! Click Done to preview."}
               </p>
+              <input
+                ref={markersFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={uploadMarkers}
+              />
               <div className="flex items-center gap-3 flex-wrap">
                 {audioFile && (
                   <Button onClick={toggleAudio} size="sm"
@@ -450,6 +497,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <span className="text-gray-400 text-xs">
                   {timingIndex}/{localItems.length} timed
                 </span>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button onClick={() => markersFileInputRef.current?.click()} variant="ghost" size="sm" className="text-blue-500 hover:text-blue-700">
+                    <Upload className="w-4 h-4 mr-1" /> Load Markers
+                  </Button>
+                  {timestamps.length > 0 && (
+                    <Button onClick={downloadMarkers} variant="ghost" size="sm" className="text-green-600 hover:text-green-800">
+                      <Download className="w-4 h-4 mr-1" /> Save Markers
+                    </Button>
+                  )}
+                </div>
               </div>
               {audioDuration > 0 && (
                 <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
