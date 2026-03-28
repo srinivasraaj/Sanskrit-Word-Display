@@ -485,7 +485,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       <div key={globalIdx} className="transition-all duration-300 ease-out select-none"
                         style={{
                           fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
-                          color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
+                          color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "#9ca3af",
                           fontFamily: "'Noto Serif Telugu', Georgia, serif",
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.06)" : "scale(1)",
