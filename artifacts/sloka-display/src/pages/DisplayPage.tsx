@@ -233,13 +233,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   if (phase === "timing") {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col text-white">
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800">
+      <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-400 hover:text-white">
+            <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-500 hover:text-gray-900">
               <ArrowLeft className="w-4 h-4 mr-1" /> Setup
             </Button>
-            <span className="text-amber-400 font-semibold text-sm">Step 1: Record Timings</span>
+            <span className="text-amber-700 font-semibold text-sm">Step 1: Record Timings</span>
           </div>
           <div className="flex items-center gap-2">
             {timingIndex >= localItems.length && (
@@ -251,12 +251,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-[35%] flex flex-col justify-center items-center border-r border-gray-800 px-6 py-8"
-            style={{ background: "linear-gradient(160deg, #1a0a00 0%, #2d1200 100%)" }}>
+          <div className="w-[35%] flex flex-col justify-center items-center border-r border-amber-100 px-6 py-8"
+            style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
             <div className="text-center space-y-3">
               {slokaLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed"
-                  style={{ color: "#f5deb3", fontSize: "clamp(13px, 1.8vw, 20px)", textShadow: "0 0 12px rgba(255,200,80,0.4)" }}>
+                  style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                   {line}
                 </p>
               ))}
@@ -264,8 +264,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
 
           <div className="flex-1 flex flex-col">
-            <div className="px-6 pt-5 pb-3 bg-gray-900 border-b border-gray-800">
-              <p className="text-gray-300 text-sm mb-3">
+            <div className="px-6 pt-5 pb-3 bg-gray-50 border-b border-gray-200">
+              <p className="text-gray-600 text-sm mb-3">
                 {!audioFile
                   ? "No audio file uploaded. Go back to Setup and add an audio file."
                   : timingIndex < localItems.length
@@ -279,16 +279,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     {isPlaying ? <><Pause className="w-4 h-4 mr-1" /> Pause</> : <><Play className="w-4 h-4 mr-1" /> Play Audio</>}
                   </Button>
                 )}
-                <Button onClick={restartTiming} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <Button onClick={restartTiming} variant="ghost" size="sm" className="text-gray-500 hover:text-gray-800">
                   <RotateCcw className="w-4 h-4 mr-1" /> Restart
                 </Button>
-                <span className="text-gray-500 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
-                <span className="text-gray-600 text-xs">
+                <span className="text-gray-400 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
+                <span className="text-gray-400 text-xs">
                   {timingIndex}/{items.length} timed
                 </span>
               </div>
               {audioDuration > 0 && (
-                <div className="mt-3 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div className="h-full bg-amber-500 rounded-full transition-all duration-100"
                     style={{ width: `${progress}%` }} />
                 </div>
@@ -307,12 +307,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       ref={isCurrent ? activeWordRef : undefined}
                       className="group flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
                       style={{
-                        background: isEditing ? "#1e3a5f" : isCurrent ? `${highlightColor}22` : "transparent",
+                        background: isEditing ? "#eff6ff" : isCurrent ? `${highlightColor}18` : "transparent",
                         borderLeft: isEditing ? "3px solid #3b82f6" : isCurrent ? `3px solid ${highlightColor}` : "3px solid transparent",
                       }}
                     >
                       <span className="text-xs font-mono w-12 shrink-0"
-                        style={{ color: isDone ? "#4ade80" : isCurrent ? highlightColor : "#4b5563" }}>
+                        style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
                         {isDone ? formatTime(timestamps[i]) : isCurrent ? "▶ now" : `#${i + 1}`}
                       </span>
 
@@ -322,17 +322,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             ref={editInputRef}
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            className="flex-1 bg-gray-800 text-white border border-blue-500 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
+                            className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
                             style={{ fontFamily: "'Noto Serif Telugu', Georgia, serif" }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
                               if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
                             }}
                           />
-                          <button onClick={confirmEdit} className="text-green-400 hover:text-green-300 p-0.5">
+                          <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
                             <Check className="w-4 h-4" />
                           </button>
-                          <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-300 p-0.5">
+                          <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -342,14 +342,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             style={{
                               fontFamily: "'Noto Serif Telugu', Georgia, serif",
                               fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
-                              color: isCurrent ? highlightColor : isDone ? "#9ca3af" : "#374151",
+                              color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
                               fontWeight: isCurrent ? "700" : "400",
                             }}>
                             {word}
                           </span>
                           <button
                             onClick={() => startEdit(i)}
-                            className="ml-auto opacity-0 group-hover:opacity-100 text-gray-600 hover:text-blue-400 transition-opacity p-0.5 shrink-0"
+                            className="ml-auto opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-500 transition-opacity p-0.5 shrink-0"
                             title="Edit word"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -362,9 +362,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               </div>
             </div>
 
-            <div className="px-6 py-3 bg-gray-900 border-t border-gray-800">
-              <p className="text-gray-600 text-xs">
-                Press <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-300 text-xs">Enter</kbd> while audio plays to mark each word's start time
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+              <p className="text-gray-500 text-xs">
+                Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-gray-600 text-xs">Enter</kbd> while audio plays to mark each word's start time
               </p>
             </div>
           </div>
@@ -374,20 +374,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-400 hover:text-white">
+          <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
             <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
           </Button>
-          <span className="text-amber-400 text-xs font-semibold">Step 2: Preview &amp; Export</span>
-          <span className="text-gray-500 text-xs">|</span>
-          <span className="text-gray-400 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
+          <span className="text-amber-700 text-xs font-semibold">Step 2: Preview &amp; Export</span>
+          <span className="text-gray-300 text-xs">|</span>
+          <span className="text-gray-500 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <Button onClick={isPlaying ? toggleAudio : startPlayback} variant="ghost" size="sm"
-            className="text-amber-400 hover:text-amber-300">
+            className="text-amber-700 hover:text-amber-800">
             {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
             <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
           </Button>
@@ -415,29 +415,29 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       </div>
 
       {audioDuration > 0 && (
-        <div className="h-1 bg-gray-800">
+        <div className="h-1 bg-gray-200">
           <div className="h-full bg-amber-500 transition-all duration-100"
             style={{ width: `${progress}%` }} />
         </div>
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[30%] flex flex-col justify-center items-center border-r border-gray-800 px-6 py-8"
-          style={{ background: "linear-gradient(160deg, #1a0a00 0%, #2d1200 100%)" }}>
+        <div className="w-[30%] flex flex-col justify-center items-center border-r border-amber-100 px-6 py-8"
+          style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
           <div className="text-center space-y-4">
             {slokaLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed"
-                style={{ color: "#f5deb3", fontSize: "clamp(14px, 2vw, 22px)", textShadow: "0 0 12px rgba(255,200,80,0.4)" }}>
+                style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                 {line}
               </p>
             ))}
           </div>
-          <div className="mt-8 w-12 h-0.5 bg-amber-700 opacity-50 rounded" />
-          <p className="mt-4 text-amber-900 text-xs opacity-60 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
+          <div className="mt-8 w-12 h-0.5 bg-amber-300 opacity-60 rounded" />
+          <p className="mt-4 text-amber-700 text-xs opacity-60 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
         </div>
 
         <div className="w-[70%] flex items-start justify-start overflow-x-auto overflow-y-hidden p-6 gap-6"
-          style={{ background: "#0f0f0f" }}>
+          style={{ background: "#fafafa" }}>
           {columns.map((col, colIdx) => (
             <div key={colIdx} className="flex flex-col gap-4 shrink-0">
               {col.map((item, rowIdx) => {
@@ -448,12 +448,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   <div key={globalIdx} className="transition-all duration-300 ease-out select-none"
                     style={{
                       fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
-                      color: isActive ? highlightColor : isPast ? "rgba(200,180,140,0.75)" : "rgba(80,70,55,0.5)",
+                      color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
                       fontFamily: "'Noto Serif Telugu', Georgia, serif",
                       lineHeight: 1.3,
                       transform: isActive ? "scale(1.08)" : "scale(1)",
                       transformOrigin: "left center",
-                      textShadow: isActive ? `0 0 20px ${highlightColor}88, 0 0 40px ${highlightColor}44` : "none",
+                      textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
                       paddingLeft: isActive ? "6px" : "0",
                       fontWeight: isActive ? "700" : isPast ? "500" : "400",
                       whiteSpace: "nowrap",
@@ -468,11 +468,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
       </div>
 
-      <div className="px-4 py-2 bg-gray-900 border-t border-gray-800 flex items-center justify-between">
-        <p className="text-gray-600 text-xs">
-          {currentIndex >= 0 ? items[currentIndex] : "Waiting for playback…"}
+      <div className="px-4 py-2 bg-white border-t border-gray-200 flex items-center justify-between">
+        <p className="text-gray-400 text-xs">
+          {currentIndex >= 0 ? localItems[currentIndex] : "Waiting for playback…"}
         </p>
-        <p className="text-gray-600 text-xs">{items.length} words · {timestamps.length} timestamps recorded</p>
+        <p className="text-gray-400 text-xs">{localItems.length} words · {timestamps.length} timestamps recorded</p>
       </div>
     </div>
   );
