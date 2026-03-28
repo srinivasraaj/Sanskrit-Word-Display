@@ -217,6 +217,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: true,
         audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: "include",
       });
       const audioEl = audioRef.current as any;
       const audioStream: MediaStream | null =
@@ -524,7 +526,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <div className="flex flex-col items-center gap-y-1">
             {displayGroupLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
+                style={{ color: "#7c3f0a", fontSize: "clamp(26px, 4vw, 48px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                 {line}
               </p>
             ))}
@@ -553,7 +555,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
                           fontFamily: "'Mandali', Georgia, serif",
                           lineHeight: 1.3,
-                          transform: isActive ? "scale(1.12)" : "scale(1)",
+                          transform: isActive ? "scale(1.3)" : "scale(1)",
                           transformOrigin: "left center",
                           textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
                           fontWeight: isActive ? "700" : isPast ? "500" : "400",
