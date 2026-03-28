@@ -48,6 +48,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [playbackOffset, setPlaybackOffset] = useState(0.15);
   const playbackOffsetRef = useRef(0.15);
   const autoDownloadRef = useRef(false);
+  const phaseRef = useRef<Phase>("timing");
+  const localItemsLenRef = useRef(flatItems.length);
+  const audioEndedInTimingRef = useRef(false);
 
   const getTimingDisplayGroup = (idx: number) => {
     let g = 0;
@@ -56,6 +59,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
     return g;
   };
+
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
 
   useEffect(() => {
     if (groups.length === 0) onBack();
@@ -69,6 +75,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     audio.addEventListener("ended", () => {
       setIsPlaying(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (phaseRef.current === "timing") {
+        const duration = audio.duration;
+        const next = [...timestampsRef.current];
+        const startIdx = timingIndexRef.current;
+        for (let i = startIdx; i < localItemsLenRef.current; i++) {
+          if (next[i] === undefined || next[i] === null) next[i] = duration;
+        }
+        timestampsRef.current = next;
+        timingIndexRef.current = localItemsLenRef.current;
+        setTimestamps([...next]);
+        setTimingIndex(localItemsLenRef.current);
+        audioEndedInTimingRef.current = true;
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         autoDownloadRef.current = true;
         mediaRecorderRef.current.stop();
@@ -104,6 +123,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => {
     if (activeWordRef.current) {
       activeWordRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [timingIndex]);
+
+  useEffect(() => {
+    if (audioEndedInTimingRef.current && timingIndex >= localItems.length) {
+      audioEndedInTimingRef.current = false;
+      setTimeout(() => goToPlayback(), 600);
     }
   }, [timingIndex]);
 
