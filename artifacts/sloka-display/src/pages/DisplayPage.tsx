@@ -64,6 +64,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
 
   useEffect(() => {
+    if (!isRecording) return;
+    const handler = () => {
+      if (document.visibilityState === "hidden") stopAndSaveRecording();
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [isRecording]);
+
+  useEffect(() => {
     if (groups.length === 0) onBack();
   }, []);
 
@@ -259,6 +268,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  const stopAndSaveRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return;
+    autoDownloadRef.current = true;
+    recorder.stop();
+    const audio = audioRef.current;
+    if (audio) { audio.pause(); }
+    setIsPlaying(false);
+    setIsRecording(false);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  };
+
   const startRecording = async () => {
     try {
       const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
@@ -289,6 +312,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         screenStream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       };
+
+      const videoTrack = screenStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.addEventListener("ended", () => {
+          stopAndSaveRecording();
+        });
+      }
+
       mediaRecorderRef.current = recorder;
       recorder.start(100);
       setIsRecording(true);
