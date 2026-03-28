@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Sanskrit Sloka Display"
+version = "1.0.0"
+id = "artifacts/sloka-display"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24671
+
+[services.development]
+run = "pnpm --filter @workspace/sloka-display run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sloka-display", "run", "build" ]
+publicDir = "artifacts/sloka-display/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24671"
+BASE_PATH = "/"
