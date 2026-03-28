@@ -537,7 +537,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden px-6 py-6 gap-8"
+        <div className="flex-1 flex items-start justify-center overflow-x-auto overflow-y-hidden px-6 py-6 gap-8"
           style={{ background: "#fafafa" }}>
           {(() => {
             const ROWS_PER_COL = 8;
