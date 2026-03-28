@@ -314,7 +314,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <div className="flex flex-col items-center gap-y-1">
               {timingGroupLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed text-center"
-                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', Georgia, serif" }}>
+                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
                   {line}
                 </p>
               ))}
@@ -392,7 +392,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                     value={editValue}
                                     onChange={(e) => setEditValue(e.target.value)}
                                     className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-                                    style={{ fontFamily: "'Mandali', Georgia, serif" }}
+                                    style={{ fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
                                       if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
@@ -409,7 +409,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <span className="font-serif"
                                     style={{
-                                      fontFamily: "'Mandali', Georgia, serif",
+                                      fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
                                       fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
                                       color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
                                       fontWeight: isCurrent ? "700" : "400",
@@ -530,7 +530,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <div className="flex flex-col items-center gap-y-1">
             {displayGroupLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#000000", fontSize: "clamp(26px, 4vw, 48px)", fontFamily: "'Mandali', Georgia, serif" }}>
+                style={{ color: "#000000", fontSize: "clamp(26px, 4vw, 48px)", fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
                 {line}
               </p>
             ))}
@@ -556,7 +556,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         style={{
                           fontSize: `${previousFontSize}px`,
                           color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
-                          fontFamily: "'Mandali', Georgia, serif",
+                          fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.3)" : "scale(1)",
                           transformOrigin: "left center",
