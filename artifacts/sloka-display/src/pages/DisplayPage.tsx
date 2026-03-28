@@ -463,28 +463,32 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={toggleAudio} variant="ghost" size="sm"
-            className="text-amber-700 hover:text-amber-800">
-            {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
-            <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
-          </Button>
+          {!isRecording && (
+            <>
+              <Button onClick={toggleAudio} variant="ghost" size="sm"
+                className="text-amber-700 hover:text-amber-800">
+                {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
+                <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
+              </Button>
 
-          <div className="flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-gray-50">
-            <span className="text-gray-400 text-xs">Sync</span>
-            <button
-              onClick={() => { const v = Math.max(0, playbackOffset - 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
-              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
-              title="Highlight later (−50 ms)"
-            >−</button>
-            <span className="text-xs font-mono text-gray-600 w-14 text-center">
-              {playbackOffset >= 0 ? `+${Math.round(playbackOffset * 1000)}` : Math.round(playbackOffset * 1000)} ms
-            </span>
-            <button
-              onClick={() => { const v = Math.min(1, playbackOffset + 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
-              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
-              title="Highlight earlier (+50 ms)"
-            >+</button>
-          </div>
+              <div className="flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-gray-50">
+                <span className="text-gray-400 text-xs">Sync</span>
+                <button
+                  onClick={() => { const v = Math.max(0, playbackOffset - 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
+                  className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
+                  title="Highlight later (−50 ms)"
+                >−</button>
+                <span className="text-xs font-mono text-gray-600 w-14 text-center">
+                  {playbackOffset >= 0 ? `+${Math.round(playbackOffset * 1000)}` : Math.round(playbackOffset * 1000)} ms
+                </span>
+                <button
+                  onClick={() => { const v = Math.min(1, playbackOffset + 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
+                  className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
+                  title="Highlight earlier (+50 ms)"
+                >+</button>
+              </div>
+            </>
+          )}
 
           {!isRecording ? (
             <Button variant="ghost" size="sm" onClick={startRecording} className="text-red-400 hover:text-red-300">
