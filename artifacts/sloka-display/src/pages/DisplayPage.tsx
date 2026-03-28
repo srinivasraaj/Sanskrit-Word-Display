@@ -693,7 +693,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
 
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
-          style={{ background: "#fafafa", paddingLeft: "16px", paddingRight: "16px" }}>
+          style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
           {(() => {
             const ROWS_PER_COL = 3;
             const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
