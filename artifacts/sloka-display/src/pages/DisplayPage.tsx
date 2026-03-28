@@ -314,7 +314,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <div className="flex flex-col items-center gap-y-1">
               {timingGroupLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed text-center"
-                  style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
+                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', Georgia, serif" }}>
                   {line}
                 </p>
               ))}
@@ -526,7 +526,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <div className="flex flex-col items-center gap-y-1">
             {displayGroupLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#7c3f0a", fontSize: "clamp(26px, 4vw, 48px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
+                style={{ color: "#000000", fontSize: "clamp(26px, 4vw, 48px)", fontFamily: "'Mandali', Georgia, serif" }}>
                 {line}
               </p>
             ))}
