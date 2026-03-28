@@ -8,7 +8,6 @@ interface DisplayPageProps {
   onBack: () => void;
 }
 
-const COLS_PER_COLUMN = 8;
 type Phase = "timing" | "playback";
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
@@ -59,8 +58,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const t = audio.currentTime;
     setAudioCurrentTime(t);
     let active = -1;
-    for (let i = timestamps.length - 1; i >= 0; i--) {
-      if (t >= timestamps[i]) { active = i; break; }
+    if (t > 0) {
+      for (let i = timestamps.length - 1; i >= 0; i--) {
+        if (t >= timestamps[i]) { active = i; break; }
+      }
     }
     setCurrentIndex(active);
     rafRef.current = requestAnimationFrame(tick);
@@ -170,20 +171,30 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const startRecording = async () => {
     try {
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
+      const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: true,
-        audio: true,
+        audio: false,
       });
+      const audioEl = audioRef.current as any;
+      const audioStream: MediaStream | null =
+        typeof audioEl?.captureStream === "function" ? audioEl.captureStream() : null;
+      const combinedTracks = [
+        ...screenStream.getVideoTracks(),
+        ...(audioStream ? audioStream.getAudioTracks() : []),
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
       chunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-        ? "video/mp4"
-        : "video/webm;codecs=vp9";
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "video/mp4";
+      const recorder = new MediaRecorder(combinedStream, { mimeType });
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         setRecordedBlob(blob);
-        stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+        screenStream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       };
       mediaRecorderRef.current = recorder;
@@ -223,12 +234,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     return `${m}:${sec}`;
   };
 
-  const numCols = Math.ceil(localItems.length / COLS_PER_COLUMN);
-  const columns: string[][] = [];
-  for (let c = 0; c < numCols; c++) {
-    columns.push(localItems.slice(c * COLS_PER_COLUMN, (c + 1) * COLS_PER_COLUMN));
-  }
-
   const progress = audioDuration > 0 ? (audioCurrentTime / audioDuration) * 100 : 0;
 
   if (phase === "timing") {
@@ -250,12 +255,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-[35%] flex flex-col justify-center items-center border-r border-amber-100 px-6 py-8"
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
             style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
-            <div className="text-center space-y-3">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
               {slokaLines.map((line, i) => (
-                <p key={i} className="font-serif leading-relaxed"
+                <p key={i} className="font-serif leading-relaxed text-center"
                   style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                   {line}
                 </p>
@@ -263,7 +268,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-6 pt-5 pb-3 bg-gray-50 border-b border-gray-200">
               <p className="text-gray-600 text-sm mb-3">
                 {!audioFile
@@ -421,50 +426,44 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-[30%] flex flex-col justify-center items-center border-r border-amber-100 px-6 py-8"
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
           style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
-          <div className="text-center space-y-4">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
             {slokaLines.map((line, i) => (
-              <p key={i} className="font-serif leading-relaxed"
+              <p key={i} className="font-serif leading-relaxed text-center"
                 style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                 {line}
               </p>
             ))}
           </div>
-          <div className="mt-8 w-12 h-0.5 bg-amber-300 opacity-60 rounded" />
-          <p className="mt-4 text-amber-700 text-xs opacity-60 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
+          <p className="mt-2 text-amber-600 text-xs opacity-50 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
         </div>
 
-        <div className="w-[70%] flex items-start justify-start overflow-x-auto overflow-y-hidden p-6 gap-6"
+        <div className="flex-1 flex items-center overflow-x-auto overflow-y-hidden px-8 gap-6"
           style={{ background: "#fafafa" }}>
-          {columns.map((col, colIdx) => (
-            <div key={colIdx} className="flex flex-col gap-4 shrink-0">
-              {col.map((item, rowIdx) => {
-                const globalIdx = colIdx * COLS_PER_COLUMN + rowIdx;
-                const isActive = globalIdx === currentIndex;
-                const isPast = globalIdx < currentIndex;
-                return (
-                  <div key={globalIdx} className="transition-all duration-300 ease-out select-none"
-                    style={{
-                      fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
-                      color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
-                      fontFamily: "'Noto Serif Telugu', Georgia, serif",
-                      lineHeight: 1.3,
-                      transform: isActive ? "scale(1.08)" : "scale(1)",
-                      transformOrigin: "left center",
-                      textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
-                      paddingLeft: isActive ? "6px" : "0",
-                      fontWeight: isActive ? "700" : isPast ? "500" : "400",
-                      whiteSpace: "nowrap",
-                    }}>
-                    {isActive && <span className="inline-block mr-2 text-sm opacity-80" style={{ color: highlightColor }}>▶</span>}
-                    {item}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+          {localItems.map((item, globalIdx) => {
+            const isActive = globalIdx === currentIndex;
+            const isPast = globalIdx < currentIndex;
+            return (
+              <div key={globalIdx} className="transition-all duration-300 ease-out select-none shrink-0"
+                style={{
+                  fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
+                  color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
+                  fontFamily: "'Noto Serif Telugu', Georgia, serif",
+                  lineHeight: 1.3,
+                  transform: isActive ? "scale(1.08)" : "scale(1)",
+                  transformOrigin: "center bottom",
+                  textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
+                  paddingBottom: isActive ? "4px" : "0",
+                  fontWeight: isActive ? "700" : isPast ? "500" : "400",
+                  whiteSpace: "nowrap",
+                }}>
+                {isActive && <span className="inline-block mr-1 text-sm opacity-80" style={{ color: highlightColor }}>▶</span>}
+                {item}
+              </div>
+            );
+          })}
         </div>
       </div>
 
