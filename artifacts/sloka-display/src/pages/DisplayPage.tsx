@@ -343,6 +343,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         });
       }
 
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      lastActiveRef.current = -1;
+      setCurrentIndex(-1);
+      setDisplayGroup(0);
+      setAudioCurrentTime(0);
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+
       mediaRecorderRef.current = recorder;
       recorder.start(100);
       setIsRecording(true);
