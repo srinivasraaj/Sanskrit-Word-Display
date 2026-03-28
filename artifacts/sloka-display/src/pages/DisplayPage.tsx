@@ -51,6 +51,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const phaseRef = useRef<Phase>("timing");
   const localItemsLenRef = useRef(flatItems.length);
   const audioEndedInTimingRef = useRef(false);
+  const lastActiveRef = useRef(-1);
+  const lastAudioTimeUpdateRef = useRef(0);
 
   const getTimingDisplayGroup = (idx: number) => {
     let g = 0;
@@ -116,7 +118,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = audioRef.current;
     if (!audio) return;
     const t = audio.currentTime;
-    setAudioCurrentTime(t);
+
+    const now = performance.now();
+    if (now - lastAudioTimeUpdateRef.current >= 100) {
+      lastAudioTimeUpdateRef.current = now;
+      setAudioCurrentTime(t);
+    }
+
     let active = -1;
     if (t > 0) {
       const ts = timestampsRef.current;
@@ -125,7 +133,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (ahead >= ts[i]) { active = i; break; }
       }
     }
-    setCurrentIndex(active);
+    if (active !== lastActiveRef.current) {
+      lastActiveRef.current = active;
+      setCurrentIndex(active);
+    }
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
@@ -627,7 +638,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     const isActive = globalIdx === currentIndex;
                     const isPast = globalIdx < currentIndex;
                     return (
-                      <div key={globalIdx} className="flex items-center transition-all duration-300 ease-out select-none"
+                      <div key={globalIdx} className="flex items-center select-none"
                         style={{
                           fontSize: `${previousFontSize}px`,
                           color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
@@ -635,9 +646,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.3)" : "scale(1)",
                           transformOrigin: "left center",
+                          transition: "transform 150ms ease-out",
                           textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
                           fontWeight: isActive ? "700" : isPast ? "500" : "400",
                           whiteSpace: "nowrap",
+                          willChange: "transform",
+                          contain: "layout style",
                         }}>
                         <span className="inline-block mr-1 text-sm"
                           style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em" }}>▶</span>
