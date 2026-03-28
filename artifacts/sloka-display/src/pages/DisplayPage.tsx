@@ -339,7 +339,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-                            style={{ fontFamily: "'Noto Serif Telugu', Georgia, serif" }}
+                            style={{ fontFamily: "'Mandali', Georgia, serif" }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
                               if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
@@ -356,7 +356,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="font-serif"
                             style={{
-                              fontFamily: "'Noto Serif Telugu', Georgia, serif",
+                              fontFamily: "'Mandali', Georgia, serif",
                               fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
                               color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
                               fontWeight: isCurrent ? "700" : "400",
@@ -486,7 +486,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         style={{
                           fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
                           color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
-                          fontFamily: "'Noto Serif Telugu', Georgia, serif",
+                          fontFamily: "'Mandali', Georgia, serif",
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.06)" : "scale(1)",
                           transformOrigin: "left center",
