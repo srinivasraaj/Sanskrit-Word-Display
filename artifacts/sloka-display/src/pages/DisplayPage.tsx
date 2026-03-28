@@ -623,7 +623,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden py-6 gap-8"
+        <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
           style={{ background: "#fafafa", paddingLeft: "20%", paddingRight: "24px" }}>
           {(() => {
             const ROWS_PER_COL = 3;
