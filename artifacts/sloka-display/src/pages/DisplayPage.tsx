@@ -441,6 +441,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <span className="text-amber-700 font-semibold text-sm">Step 1: Record Timings</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={() => markersFileInputRef.current?.click()} variant="ghost" size="sm" className="text-blue-500 hover:text-blue-700">
+              <Upload className="w-4 h-4 mr-1" /> Load Markers
+            </Button>
+            {timestamps.length > 0 && (
+              <Button onClick={downloadMarkers} variant="ghost" size="sm" className="text-green-600 hover:text-green-800">
+                <Download className="w-4 h-4 mr-1" /> Save Markers
+              </Button>
+            )}
             {timingIndex >= localItems.length && (
               <Button onClick={goToPlayback} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
                 <CheckCircle className="w-4 h-4 mr-1" /> Done — Preview
@@ -497,16 +505,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <span className="text-gray-400 text-xs">
                   {timingIndex}/{localItems.length} timed
                 </span>
-                <div className="ml-auto flex items-center gap-2">
-                  <Button onClick={() => markersFileInputRef.current?.click()} variant="ghost" size="sm" className="text-blue-500 hover:text-blue-700">
-                    <Upload className="w-4 h-4 mr-1" /> Load Markers
-                  </Button>
-                  {timestamps.length > 0 && (
-                    <Button onClick={downloadMarkers} variant="ghost" size="sm" className="text-green-600 hover:text-green-800">
-                      <Download className="w-4 h-4 mr-1" /> Save Markers
-                    </Button>
-                  )}
-                </div>
               </div>
               {audioDuration > 0 && (
                 <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
