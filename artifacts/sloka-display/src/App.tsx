@@ -1,15 +1,6 @@
 import { useState } from "react";
-import SetupPage, { SetupData } from "@/pages/SetupPage";
+import SetupPage, { SetupData, SavedDraft } from "@/pages/SetupPage";
 import DisplayPage from "@/pages/DisplayPage";
-
-interface SavedDraft {
-  slokaText: string;
-  wordsText: string;
-  audioFile: File | null;
-  highlightColor: string;
-  highlightedFontSize: number;
-  previousFontSize: number;
-}
 
 export default function App() {
   const [setupData, setSetupData] = useState<SetupData | null>(null);

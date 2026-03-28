@@ -11,10 +11,17 @@ interface DisplayPageProps {
 type Phase = "timing" | "playback";
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
-  const { slokaLines, items, audioFile, highlightColor, highlightedFontSize, previousFontSize } = data;
+  const { groups: rawGroups, audioFile, highlightColor, highlightedFontSize, previousFontSize } = data;
+  const groups = rawGroups ?? [];
+
+  const flatItems = groups.flatMap((g) => g.words);
+  const groupStartIndices: number[] = groups.reduce<number[]>((acc, g, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1] + groups[i - 1].words.length);
+    return acc;
+  }, []);
 
   const [phase, setPhase] = useState<Phase>("timing");
-  const [localItems, setLocalItems] = useState<string[]>([...items]);
+  const [localItems, setLocalItems] = useState<string[]>([...flatItems]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [timestamps, setTimestamps] = useState<number[]>([]);
@@ -26,6 +33,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [displayGroup, setDisplayGroup] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -39,6 +47,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const timingIndexRef = useRef(0);
   const [playbackOffset, setPlaybackOffset] = useState(0.15);
   const playbackOffsetRef = useRef(0.15);
+
+  const getTimingDisplayGroup = (idx: number) => {
+    let g = 0;
+    for (let i = groupStartIndices.length - 1; i >= 0; i--) {
+      if (idx >= groupStartIndices[i]) { g = i; break; }
+    }
+    return g;
+  };
+
+  useEffect(() => {
+    if (groups.length === 0) onBack();
+  }, []);
 
   useEffect(() => {
     if (!audioFile) return;
@@ -77,6 +97,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (activeWordRef.current) {
       activeWordRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
+  }, [timingIndex]);
+
+  useEffect(() => {
+    if (currentIndex < 0) return;
+    let g = 0;
+    for (let i = groupStartIndices.length - 1; i >= 0; i--) {
+      if (currentIndex >= groupStartIndices[i]) { g = i; break; }
+    }
+    setDisplayGroup(g);
   }, [currentIndex]);
 
   const toggleAudio = () => {
@@ -152,6 +181,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
+    setDisplayGroup(0);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     setPhase("playback");
   };
@@ -167,6 +197,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimingIndex(0);
     setAudioCurrentTime(0);
     setCurrentIndex(-1);
+    setDisplayGroup(0);
     setPhase("timing");
   };
 
@@ -175,6 +206,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (!audio) return;
     audio.currentTime = 0;
     setCurrentIndex(-1);
+    setDisplayGroup(0);
     audio.play();
     setIsPlaying(true);
     rafRef.current = requestAnimationFrame(tick);
@@ -248,6 +280,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const progress = audioDuration > 0 ? (audioCurrentTime / audioDuration) * 100 : 0;
 
   if (phase === "timing") {
+    const timingGroup = getTimingDisplayGroup(timingIndex);
+    const timingGroupLines = groups[timingGroup]?.lines ?? [];
+
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
         <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
@@ -269,10 +304,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
             style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
+            {groups.length > 1 && (
+              <p className="text-xs text-amber-500 mb-1 font-medium">
+                Group {timingGroup + 1} of {groups.length}
+              </p>
+            )}
             <div className="flex flex-col items-center gap-y-1">
-              {slokaLines.map((line, i) => (
+              {timingGroupLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed text-center"
-                  style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
+                  style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                   {line}
                 </p>
               ))}
@@ -300,7 +340,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </Button>
                 <span className="text-gray-400 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
                 <span className="text-gray-400 text-xs">
-                  {timingIndex}/{items.length} timed
+                  {timingIndex}/{localItems.length} timed
                 </span>
               </div>
               {audioDuration > 0 && (
@@ -312,66 +352,81 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6" ref={wordListRef}>
-              <div className="space-y-1 max-w-lg">
-                {localItems.map((word, i) => {
-                  const isCurrent = i === timingIndex;
-                  const isDone = i < timingIndex;
-                  const isEditing = editingIndex === i;
+              <div className="space-y-4 max-w-lg">
+                {groups.map((group, groupIdx) => {
+                  const groupStart = groupStartIndices[groupIdx];
+                  const isCurrentGroup = groupIdx === getTimingDisplayGroup(timingIndex);
                   return (
-                    <div
-                      key={i}
-                      ref={isCurrent ? activeWordRef : undefined}
-                      className="group flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-                      style={{
-                        background: isEditing ? "#eff6ff" : isCurrent ? `${highlightColor}18` : "transparent",
-                        borderLeft: isEditing ? "3px solid #3b82f6" : isCurrent ? `3px solid ${highlightColor}` : "3px solid transparent",
-                      }}
-                    >
-                      <span className="text-xs font-mono w-12 shrink-0"
-                        style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
-                        {isDone ? formatTime(timestamps[i]) : isCurrent ? "▶ now" : `#${i + 1}`}
-                      </span>
+                    <div key={groupIdx}>
+                      <div className={`text-xs font-semibold mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
+                        Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
+                      </div>
+                      <div className="space-y-1">
+                        {group.words.map((_, wordIdx) => {
+                          const i = groupStart + wordIdx;
+                          const word = localItems[i];
+                          const isCurrent = i === timingIndex;
+                          const isDone = i < timingIndex;
+                          const isEditing = editingIndex === i;
+                          return (
+                            <div
+                              key={i}
+                              ref={isCurrent ? activeWordRef : undefined}
+                              className="group flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
+                              style={{
+                                background: isEditing ? "#eff6ff" : isCurrent ? `${highlightColor}18` : "transparent",
+                                borderLeft: isEditing ? "3px solid #3b82f6" : isCurrent ? `3px solid ${highlightColor}` : "3px solid transparent",
+                              }}
+                            >
+                              <span className="text-xs font-mono w-12 shrink-0"
+                                style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
+                                {isDone ? formatTime(timestamps[i]) : isCurrent ? "▶ now" : `#${i + 1}`}
+                              </span>
 
-                      {isEditing ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            ref={editInputRef}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-                            style={{ fontFamily: "'Mandali', Georgia, serif" }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
-                              if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
-                            }}
-                          />
-                          <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="font-serif"
-                            style={{
-                              fontFamily: "'Mandali', Georgia, serif",
-                              fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
-                              color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
-                              fontWeight: isCurrent ? "700" : "400",
-                            }}>
-                            {word}
-                          </span>
-                          <button
-                            onClick={() => startEdit(i)}
-                            className="ml-auto opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-500 transition-opacity p-0.5 shrink-0"
-                            title="Edit word"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
+                              {isEditing ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    ref={editInputRef}
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
+                                    style={{ fontFamily: "'Mandali', Georgia, serif" }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
+                                      if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
+                                    }}
+                                  />
+                                  <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="font-serif"
+                                    style={{
+                                      fontFamily: "'Mandali', Georgia, serif",
+                                      fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
+                                      color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
+                                      fontWeight: isCurrent ? "700" : "400",
+                                    }}>
+                                    {word}
+                                  </span>
+                                  <button
+                                    onClick={() => startEdit(i)}
+                                    className="ml-auto opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-500 transition-opacity p-0.5 shrink-0"
+                                    title="Edit word"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
@@ -388,6 +443,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       </div>
     );
   }
+
+  const displayGroupLines = groups[displayGroup]?.lines ?? [];
+  const displayGroupWords = groups[displayGroup]?.words ?? [];
+  const displayGroupStart = groupStartIndices[displayGroup] ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -457,10 +516,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
           style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
+          {groups.length > 1 && (
+            <p className="text-xs text-amber-400 mb-1">
+              {displayGroup + 1} / {groups.length}
+            </p>
+          )}
           <div className="flex flex-col items-center gap-y-1">
-            {slokaLines.map((line, i) => (
+            {displayGroupLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
+                style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", fontFamily: "'Mandali', Georgia, serif", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
                 {line}
               </p>
             ))}
@@ -472,13 +536,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           style={{ background: "#fafafa" }}>
           {(() => {
             const ROWS_PER_COL = 8;
-            const numCols = Math.ceil(localItems.length / ROWS_PER_COL);
+            const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
             return Array.from({ length: numCols }, (_, colIdx) => {
-              const colItems = localItems.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
+              const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
               return (
-                <div key={colIdx} className="flex flex-col gap-3 shrink-0">
-                  {colItems.map((item, rowIdx) => {
-                    const globalIdx = colIdx * ROWS_PER_COL + rowIdx;
+                <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-3 shrink-0">
+                  {colItems.map((_, rowIdx) => {
+                    const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
+                    const item = localItems[globalIdx];
                     const isActive = globalIdx === currentIndex;
                     const isPast = globalIdx < currentIndex;
                     return (
