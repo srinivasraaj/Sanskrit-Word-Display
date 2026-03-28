@@ -258,7 +258,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
             style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
+            <div className="flex flex-col items-center gap-y-1">
               {slokaLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed text-center"
                   style={{ color: "#7c3f0a", fontSize: "clamp(13px, 1.8vw, 20px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
@@ -429,7 +429,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
           style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
+          <div className="flex flex-col items-center gap-y-1">
             {slokaLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
                 style={{ color: "#7c3f0a", fontSize: "clamp(14px, 2vw, 22px)", textShadow: "0 0 8px rgba(150,80,0,0.12)" }}>
@@ -440,30 +440,42 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <p className="mt-2 text-amber-600 text-xs opacity-50 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
         </div>
 
-        <div className="flex-1 flex items-center overflow-x-auto overflow-y-hidden px-8 gap-6"
+        <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden px-6 py-6 gap-8"
           style={{ background: "#fafafa" }}>
-          {localItems.map((item, globalIdx) => {
-            const isActive = globalIdx === currentIndex;
-            const isPast = globalIdx < currentIndex;
-            return (
-              <div key={globalIdx} className="transition-all duration-300 ease-out select-none shrink-0"
-                style={{
-                  fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
-                  color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
-                  fontFamily: "'Noto Serif Telugu', Georgia, serif",
-                  lineHeight: 1.3,
-                  transform: isActive ? "scale(1.08)" : "scale(1)",
-                  transformOrigin: "center bottom",
-                  textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
-                  paddingBottom: isActive ? "4px" : "0",
-                  fontWeight: isActive ? "700" : isPast ? "500" : "400",
-                  whiteSpace: "nowrap",
-                }}>
-                {isActive && <span className="inline-block mr-1 text-sm opacity-80" style={{ color: highlightColor }}>▶</span>}
-                {item}
-              </div>
-            );
-          })}
+          {(() => {
+            const ROWS_PER_COL = 8;
+            const numCols = Math.ceil(localItems.length / ROWS_PER_COL);
+            return Array.from({ length: numCols }, (_, colIdx) => {
+              const colItems = localItems.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
+              return (
+                <div key={colIdx} className="flex flex-col gap-3 shrink-0">
+                  {colItems.map((item, rowIdx) => {
+                    const globalIdx = colIdx * ROWS_PER_COL + rowIdx;
+                    const isActive = globalIdx === currentIndex;
+                    const isPast = globalIdx < currentIndex;
+                    return (
+                      <div key={globalIdx} className="transition-all duration-300 ease-out select-none"
+                        style={{
+                          fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
+                          color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "rgba(180,150,110,0.4)",
+                          fontFamily: "'Noto Serif Telugu', Georgia, serif",
+                          lineHeight: 1.3,
+                          transform: isActive ? "scale(1.06)" : "scale(1)",
+                          transformOrigin: "left center",
+                          textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
+                          paddingLeft: isActive ? "6px" : "0",
+                          fontWeight: isActive ? "700" : isPast ? "500" : "400",
+                          whiteSpace: "nowrap",
+                        }}>
+                        {isActive && <span className="inline-block mr-1 text-sm opacity-80" style={{ color: highlightColor }}>▶</span>}
+                        {item}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 
