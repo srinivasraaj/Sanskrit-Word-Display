@@ -713,7 +713,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             return Array.from({ length: numCols }, (_, colIdx) => {
               const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
               return (
-                <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-12 shrink-0">
+                <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-24 shrink-0">
                   {colItems.map((_, rowIdx) => {
                     const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                     const item = localItems[globalIdx];
