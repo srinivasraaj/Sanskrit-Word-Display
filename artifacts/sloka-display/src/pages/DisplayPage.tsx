@@ -547,20 +547,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     const isActive = globalIdx === currentIndex;
                     const isPast = globalIdx < currentIndex;
                     return (
-                      <div key={globalIdx} className="transition-all duration-300 ease-out select-none"
+                      <div key={globalIdx} className="flex items-center transition-all duration-300 ease-out select-none"
                         style={{
-                          fontSize: isActive ? `${highlightedFontSize}px` : isPast ? `${previousFontSize}px` : `${Math.round(previousFontSize * 0.75)}px`,
+                          fontSize: `${previousFontSize}px`,
                           color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
                           fontFamily: "'Mandali', Georgia, serif",
                           lineHeight: 1.3,
-                          transform: isActive ? "scale(1.06)" : "scale(1)",
+                          transform: isActive ? "scale(1.12)" : "scale(1)",
                           transformOrigin: "left center",
                           textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
-                          paddingLeft: isActive ? "6px" : "0",
                           fontWeight: isActive ? "700" : isPast ? "500" : "400",
                           whiteSpace: "nowrap",
                         }}>
-                        {isActive && <span className="inline-block mr-1 text-sm opacity-80" style={{ color: highlightColor }}>▶</span>}
+                        <span className="inline-block mr-1 text-sm"
+                          style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em" }}>▶</span>
                         {item}
                       </div>
                     );
