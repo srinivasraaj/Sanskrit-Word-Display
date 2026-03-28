@@ -47,6 +47,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const timingIndexRef = useRef(0);
   const [playbackOffset, setPlaybackOffset] = useState(0.15);
   const playbackOffsetRef = useRef(0.15);
+  const autoDownloadRef = useRef(false);
 
   const getTimingDisplayGroup = (idx: number) => {
     let g = 0;
@@ -68,6 +69,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     audio.addEventListener("ended", () => {
       setIsPlaying(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        autoDownloadRef.current = true;
+        mediaRecorderRef.current.stop();
+        setIsRecording(false);
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      }
     });
     audioRef.current = audio;
     return () => {
@@ -98,6 +106,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       activeWordRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [timingIndex]);
+
+  useEffect(() => {
+    if (recordedBlob && autoDownloadRef.current) {
+      autoDownloadRef.current = false;
+      const ext = recordedBlob.type.includes("mp4") ? "mp4" : "webm";
+      const url = URL.createObjectURL(recordedBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sloka-display.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }, [recordedBlob]);
 
   useEffect(() => {
     if (currentIndex < 0) return;
@@ -459,8 +480,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   return (
     <div className="bg-gray-50 flex flex-col"
       style={isRecording ? { position: "fixed", inset: 0, zIndex: 9999 } : { minHeight: "100vh" }}>
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
-        {!isRecording && (
+      {!isRecording && (
+        <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
               <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
@@ -469,58 +490,45 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <span className="text-gray-300 text-xs">|</span>
             <span className="text-gray-500 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
           </div>
-        )}
-        {isRecording && <div />}
 
-        <div className="flex items-center gap-2">
-          {!isRecording && (
-            <>
-              <Button onClick={toggleAudio} variant="ghost" size="sm"
-                className="text-amber-700 hover:text-amber-800">
-                {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
-                <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
-              </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={toggleAudio} variant="ghost" size="sm"
+              className="text-amber-700 hover:text-amber-800">
+              {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
+              <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
+            </Button>
 
-              <div className="flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-gray-50">
-                <span className="text-gray-400 text-xs">Sync</span>
-                <button
-                  onClick={() => { const v = Math.max(0, playbackOffset - 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
-                  className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
-                  title="Highlight later (−50 ms)"
-                >−</button>
-                <span className="text-xs font-mono text-gray-600 w-14 text-center">
-                  {playbackOffset >= 0 ? `+${Math.round(playbackOffset * 1000)}` : Math.round(playbackOffset * 1000)} ms
-                </span>
-                <button
-                  onClick={() => { const v = Math.min(1, playbackOffset + 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
-                  className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
-                  title="Highlight earlier (+50 ms)"
-                >+</button>
-              </div>
-            </>
-          )}
+            <div className="flex items-center gap-1 border border-gray-200 rounded px-2 py-1 bg-gray-50">
+              <span className="text-gray-400 text-xs">Sync</span>
+              <button
+                onClick={() => { const v = Math.max(0, playbackOffset - 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
+                className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
+                title="Highlight later (−50 ms)"
+              >−</button>
+              <span className="text-xs font-mono text-gray-600 w-14 text-center">
+                {playbackOffset >= 0 ? `+${Math.round(playbackOffset * 1000)}` : Math.round(playbackOffset * 1000)} ms
+              </span>
+              <button
+                onClick={() => { const v = Math.min(1, playbackOffset + 0.05); setPlaybackOffset(v); playbackOffsetRef.current = v; }}
+                className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 font-bold text-sm rounded hover:bg-gray-200"
+                title="Highlight earlier (+50 ms)"
+              >+</button>
+            </div>
 
-          {!isRecording ? (
             <Button variant="ghost" size="sm" onClick={startRecording} className="text-red-400 hover:text-red-300">
               <Video className="w-4 h-4 mr-1" />
               <span className="text-xs">Record &amp; Export</span>
             </Button>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={stopRecording}
-              className="text-red-500 hover:text-red-400 animate-pulse">
-              <Square className="w-4 h-4 mr-1" />
-              <span className="text-xs">Stop {Math.floor(recordingTime / 60).toString().padStart(2, "0")}:{(recordingTime % 60).toString().padStart(2, "0")}</span>
-            </Button>
-          )}
 
-          {recordedBlob && !isRecording && (
-            <Button variant="ghost" size="sm" onClick={downloadRecording} className="text-green-400 hover:text-green-300">
-              <Download className="w-4 h-4 mr-1" />
-              <span className="text-xs">Download</span>
-            </Button>
-          )}
+            {recordedBlob && (
+              <Button variant="ghost" size="sm" onClick={downloadRecording} className="text-green-400 hover:text-green-300">
+                <Download className="w-4 h-4 mr-1" />
+                <span className="text-xs">Download</span>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {!isRecording && audioDuration > 0 && (
         <div className="h-1 bg-gray-200">
