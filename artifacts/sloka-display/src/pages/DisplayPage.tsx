@@ -253,6 +253,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setPhase("playback");
   };
 
+  const resetPreview = () => {
+    const audio = audioRef.current;
+    if (audio) { audio.pause(); audio.currentTime = 0; }
+    setIsPlaying(false);
+    lastActiveRef.current = -1;
+    setCurrentIndex(-1);
+    setAudioCurrentTime(0);
+    setDisplayGroup(0);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+  };
+
   const restartTiming = () => {
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
@@ -553,6 +564,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
               <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
+            </Button>
+            <Button variant="ghost" size="sm" onClick={resetPreview} className="text-gray-500 hover:text-gray-800">
+              <RotateCcw className="w-4 h-4 mr-1" /> Reset
             </Button>
             <span className="text-amber-700 text-xs font-semibold">Step 2: Preview &amp; Export</span>
             <span className="text-gray-300 text-xs">|</span>
