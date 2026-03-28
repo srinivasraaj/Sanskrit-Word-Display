@@ -152,7 +152,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (!audio || !isPlaying) return;
     const idx = timingIndexRef.current;
     if (idx >= localItems.length) return;
-    const t = audio.currentTime;
+    const t = Math.max(0, audio.currentTime - 1);
     const next = [...timestampsRef.current];
     next[idx] = t;
     timestampsRef.current = next;
