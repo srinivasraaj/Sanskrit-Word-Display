@@ -626,7 +626,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden py-6 gap-8"
           style={{ background: "#fafafa", paddingLeft: "20%", paddingRight: "24px" }}>
           {(() => {
-            const ROWS_PER_COL = 8;
+            const ROWS_PER_COL = 3;
             const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
             return Array.from({ length: numCols }, (_, colIdx) => {
               const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
