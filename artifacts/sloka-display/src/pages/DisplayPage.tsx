@@ -463,7 +463,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={isPlaying ? toggleAudio : startPlayback} variant="ghost" size="sm"
+          <Button onClick={toggleAudio} variant="ghost" size="sm"
             className="text-amber-700 hover:text-amber-800">
             {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
             <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
