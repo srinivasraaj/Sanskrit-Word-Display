@@ -247,6 +247,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimerRef.current = window.setInterval(() => setRecordingTime((t) => t + 1), 1000);
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
       setTimeout(() => startPlayback(), 500);
     } catch {
       alert("Allow screen sharing to record. Then recording will auto-start playback.");
@@ -259,6 +262,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (audio) { audio.pause(); }
     setIsPlaying(false);
     setIsRecording(false);
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
   };
 
