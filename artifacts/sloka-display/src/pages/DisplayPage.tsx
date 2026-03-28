@@ -647,7 +647,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           transform: isActive ? "scale(1.3)" : "scale(1)",
                           transformOrigin: "left center",
                           transition: "transform 150ms ease-out",
-                          textShadow: isActive ? `0 0 16px ${highlightColor}66, 0 0 32px ${highlightColor}33` : "none",
+                          textShadow: "none",
                           fontWeight: isActive ? "700" : isPast ? "500" : "400",
                           whiteSpace: "nowrap",
                           willChange: "transform",
