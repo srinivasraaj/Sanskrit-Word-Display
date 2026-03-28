@@ -706,7 +706,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         <div className="w-full" style={{ height: "1px", background: "linear-gradient(to right, transparent 0%, rgba(180,160,120,0.35) 20%, rgba(160,130,80,0.55) 50%, rgba(180,160,120,0.35) 80%, transparent 100%)" }} />
 
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
-          style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
+          style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
           {(() => {
             const ROWS_PER_COL = 3;
             const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
