@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export interface SetupData {
-  slokaLines: [string, string, string, string];
+  slokaLines: string[];
   items: string[];
   audioFile: File | null;
   highlightColor: string;
@@ -19,10 +19,7 @@ interface SetupPageProps {
 }
 
 export default function SetupPage({ onStart }: SetupPageProps) {
-  const [slokaLine1, setSlokaLine1] = useState("");
-  const [slokaLine2, setSlokaLine2] = useState("");
-  const [slokaLine3, setSlokaLine3] = useState("");
-  const [slokaLine4, setSlokaLine4] = useState("");
+  const [slokaText, setSlokaText] = useState("");
   const [wordsText, setWordsText] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [highlightColor, setHighlightColor] = useState("#FFD700");
@@ -30,13 +27,17 @@ export default function SetupPage({ onStart }: SetupPageProps) {
   const [previousFontSize, setPreviousFontSize] = useState(24);
 
   const handleStart = () => {
+    const slokaLines = slokaText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     const items = wordsText
       .split("\n")
       .map((w) => w.trim())
       .filter((w) => w.length > 0);
     if (items.length === 0) return;
     onStart({
-      slokaLines: [slokaLine1, slokaLine2, slokaLine3, slokaLine4],
+      slokaLines,
       items,
       audioFile,
       highlightColor,
@@ -56,23 +57,14 @@ export default function SetupPage({ onStart }: SetupPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border-amber-200 shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-amber-900 text-lg">Sanskrit Sloka (4 Lines)</CardTitle>
+              <CardTitle className="text-amber-900 text-lg">Sloka</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { val: slokaLine1, set: setSlokaLine1, label: "Line 1" },
-                { val: slokaLine2, set: setSlokaLine2, label: "Line 2" },
-                { val: slokaLine3, set: setSlokaLine3, label: "Line 3" },
-                { val: slokaLine4, set: setSlokaLine4, label: "Line 4" },
-              ].map(({ val, set, label }) => (
-                <div key={label}>
-                  <Input
-                    value={val}
-                    onChange={(e) => set(e.target.value)}
-                    className="border-amber-200 text-amber-900 bg-white font-serif"
-                  />
-                </div>
-              ))}
+            <CardContent>
+              <Textarea
+                value={slokaText}
+                onChange={(e) => setSlokaText(e.target.value)}
+                className="border-amber-200 text-amber-900 bg-white font-serif min-h-[180px] resize-y"
+              />
             </CardContent>
           </Card>
 
