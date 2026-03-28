@@ -19,13 +19,11 @@ interface SetupPageProps {
 }
 
 export default function SetupPage({ onStart }: SetupPageProps) {
-  const [slokaLine1, setSlokaLine1] = useState("ఓం సహ నావవతు।");
-  const [slokaLine2, setSlokaLine2] = useState("సహ నౌ భునక్తు।");
-  const [slokaLine3, setSlokaLine3] = useState("సహ వీర్యం కరవావహై।");
-  const [slokaLine4, setSlokaLine4] = useState("తేజస్వినావధీతమస్తు మా విద్విషావహై।");
-  const [wordsText, setWordsText] = useState(
-    "ఓం\nసహ\nనావవతు\nసహ\nనౌ\nభునక్తు\nసహ\nవీర్యం\nకరవావహై"
-  );
+  const [slokaLine1, setSlokaLine1] = useState("");
+  const [slokaLine2, setSlokaLine2] = useState("");
+  const [slokaLine3, setSlokaLine3] = useState("");
+  const [slokaLine4, setSlokaLine4] = useState("");
+  const [wordsText, setWordsText] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [highlightColor, setHighlightColor] = useState("#FFD700");
   const [highlightedFontSize, setHighlightedFontSize] = useState(48);
