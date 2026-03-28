@@ -19,12 +19,12 @@ interface SetupPageProps {
 }
 
 export default function SetupPage({ onStart }: SetupPageProps) {
-  const [slokaLine1, setSlokaLine1] = useState("ॐ सह नाववतु।");
-  const [slokaLine2, setSlokaLine2] = useState("सह नौ भुनक्तु।");
-  const [slokaLine3, setSlokaLine3] = useState("सह वीर्यं करवावहै।");
-  const [slokaLine4, setSlokaLine4] = useState("तेजस्विनावधीतमस्तु मा विद्विषावहै।");
+  const [slokaLine1, setSlokaLine1] = useState("ఓం సహ నావవతు।");
+  const [slokaLine2, setSlokaLine2] = useState("సహ నౌ భునక్తు।");
+  const [slokaLine3, setSlokaLine3] = useState("సహ వీర్యం కరవావహై।");
+  const [slokaLine4, setSlokaLine4] = useState("తేజస్వినావధీతమస్తు మా విద్విషావహై।");
   const [wordsText, setWordsText] = useState(
-    "ॐ\nसह\nनाववतु\nसह\nनौ\nभुनक्तु\nसह\nवीर्यं\nकरवावहै"
+    "ఓం\nసహ\nనావవతు\nసహ\nనౌ\nభునక్తు\nసహ\nవీర్యం\nకరవావహై"
   );
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [highlightColor, setHighlightColor] = useState("#FFD700");
@@ -68,12 +68,10 @@ export default function SetupPage({ onStart }: SetupPageProps) {
                 { val: slokaLine4, set: setSlokaLine4, label: "Line 4" },
               ].map(({ val, set, label }) => (
                 <div key={label}>
-                  <Label className="text-xs text-amber-700 mb-1">{label}</Label>
                   <Input
                     value={val}
                     onChange={(e) => set(e.target.value)}
                     className="border-amber-200 text-amber-900 bg-white font-serif"
-                    placeholder={`Enter ${label}...`}
                   />
                 </div>
               ))}
@@ -85,14 +83,10 @@ export default function SetupPage({ onStart }: SetupPageProps) {
               <CardTitle className="text-amber-900 text-lg">Words / Sentences</CardTitle>
             </CardHeader>
             <CardContent>
-              <Label className="text-xs text-amber-700 mb-1">
-                One word or sentence per line
-              </Label>
               <Textarea
                 value={wordsText}
                 onChange={(e) => setWordsText(e.target.value)}
                 className="border-amber-200 text-amber-900 bg-white font-serif min-h-[180px] resize-y"
-                placeholder="Enter one word or sentence per line..."
               />
             </CardContent>
           </Card>
@@ -104,7 +98,6 @@ export default function SetupPage({ onStart }: SetupPageProps) {
               <CardTitle className="text-amber-900 text-lg">Audio (Optional)</CardTitle>
             </CardHeader>
             <CardContent>
-              <Label className="text-xs text-amber-700 mb-1">Upload audio file (MP3, WAV, etc.)</Label>
               <Input
                 type="file"
                 accept="audio/*"

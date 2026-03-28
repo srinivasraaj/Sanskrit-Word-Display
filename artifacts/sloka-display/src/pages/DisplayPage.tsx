@@ -236,7 +236,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
           <div className="mt-8 w-12 h-0.5 bg-amber-700 opacity-50 rounded" />
           <p className="mt-4 text-amber-900 text-xs opacity-60 font-serif italic">
-            ॐ शांति शांति शांतिः
+            ఓం శాంతి శాంతి శాంతిః
           </p>
         </div>
 
@@ -266,7 +266,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         : isPast
                         ? "rgba(200,180,140,0.75)"
                         : "rgba(80,70,55,0.5)",
-                      fontFamily: "'Noto Serif', serif",
+                      fontFamily: "'Noto Serif Telugu', Georgia, serif",
                       lineHeight: 1.3,
                       transform: isActive ? "scale(1.08)" : "scale(1)",
                       transformOrigin: "left center",
