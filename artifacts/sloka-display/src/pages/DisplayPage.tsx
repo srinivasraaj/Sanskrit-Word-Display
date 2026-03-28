@@ -35,6 +35,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const wordListRef = useRef<HTMLDivElement>(null);
   const activeWordRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const timestampsRef = useRef<number[]>([]);
+  const timingIndexRef = useRef(0);
 
   useEffect(() => {
     if (!audioFile) return;
@@ -59,13 +61,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setAudioCurrentTime(t);
     let active = -1;
     if (t > 0) {
-      for (let i = timestamps.length - 1; i >= 0; i--) {
-        if (t >= timestamps[i]) { active = i; break; }
+      const ts = timestampsRef.current;
+      for (let i = ts.length - 1; i >= 0; i--) {
+        if (t >= ts[i]) { active = i; break; }
       }
     }
     setCurrentIndex(active);
     rafRef.current = requestAnimationFrame(tick);
-  }, [timestamps]);
+  }, []);
 
   useEffect(() => {
     if (activeWordRef.current) {
@@ -115,15 +118,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const handleEnterTiming = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !isPlaying) return;
-    if (timingIndex >= localItems.length) return;
+    const idx = timingIndexRef.current;
+    if (idx >= localItems.length) return;
     const t = audio.currentTime;
-    setTimestamps((prev) => {
-      const next = [...prev];
-      next[timingIndex] = t;
-      return next;
-    });
-    setTimingIndex((i) => i + 1);
-  }, [isPlaying, timingIndex, localItems.length]);
+    const next = [...timestampsRef.current];
+    next[idx] = t;
+    timestampsRef.current = next;
+    timingIndexRef.current = idx + 1;
+    setTimestamps(next);
+    setTimingIndex(idx + 1);
+  }, [isPlaying, localItems.length]);
 
   useEffect(() => {
     if (phase !== "timing") return;
@@ -153,9 +157,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    timestampsRef.current = [];
+    timingIndexRef.current = 0;
     setTimestamps([]);
     setTimingIndex(0);
     setAudioCurrentTime(0);
+    setCurrentIndex(-1);
     setPhase("timing");
   };
 
