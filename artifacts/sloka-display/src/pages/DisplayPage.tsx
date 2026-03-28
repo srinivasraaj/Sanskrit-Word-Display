@@ -675,7 +675,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       )}
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
+        <div className="flex flex-col items-center justify-center px-6 py-4"
           style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
           {groups.length > 1 && (
             <p className="text-xs text-amber-400 mb-1">
@@ -691,6 +691,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             ))}
           </div>
         </div>
+
+        <div className="w-full" style={{ height: "1px", background: "linear-gradient(to right, transparent 0%, rgba(180,160,120,0.35) 20%, rgba(160,130,80,0.55) 50%, rgba(180,160,120,0.35) 80%, transparent 100%)" }} />
 
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
           style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
