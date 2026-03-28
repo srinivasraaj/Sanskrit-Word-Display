@@ -14,17 +14,27 @@ export interface SetupData {
   previousFontSize: number;
 }
 
-interface SetupPageProps {
-  onStart: (data: SetupData) => void;
+interface SavedDraft {
+  slokaText: string;
+  wordsText: string;
+  audioFile: File | null;
+  highlightColor: string;
+  highlightedFontSize: number;
+  previousFontSize: number;
 }
 
-export default function SetupPage({ onStart }: SetupPageProps) {
-  const [slokaText, setSlokaText] = useState("");
-  const [wordsText, setWordsText] = useState("");
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [highlightColor, setHighlightColor] = useState("#FFD700");
-  const [highlightedFontSize, setHighlightedFontSize] = useState(48);
-  const [previousFontSize, setPreviousFontSize] = useState(24);
+interface SetupPageProps {
+  onStart: (data: SetupData, draft: SavedDraft) => void;
+  initialDraft?: SavedDraft | null;
+}
+
+export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
+  const [slokaText, setSlokaText] = useState(initialDraft?.slokaText ?? "");
+  const [wordsText, setWordsText] = useState(initialDraft?.wordsText ?? "");
+  const [audioFile, setAudioFile] = useState<File | null>(initialDraft?.audioFile ?? null);
+  const [highlightColor, setHighlightColor] = useState(initialDraft?.highlightColor ?? "#FFD700");
+  const [highlightedFontSize, setHighlightedFontSize] = useState(initialDraft?.highlightedFontSize ?? 48);
+  const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 24);
 
   const handleStart = () => {
     const slokaLines = slokaText
@@ -36,14 +46,8 @@ export default function SetupPage({ onStart }: SetupPageProps) {
       .map((w) => w.trim())
       .filter((w) => w.length > 0);
     if (items.length === 0) return;
-    onStart({
-      slokaLines,
-      items,
-      audioFile,
-      highlightColor,
-      highlightedFontSize,
-      previousFontSize,
-    });
+    const draft: SavedDraft = { slokaText, wordsText, audioFile, highlightColor, highlightedFontSize, previousFontSize };
+    onStart({ slokaLines, items, audioFile, highlightColor, highlightedFontSize, previousFontSize }, draft);
   };
 
   return (
