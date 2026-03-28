@@ -11,7 +11,7 @@ interface DisplayPageProps {
 type Phase = "timing" | "playback";
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
-  const { groups: rawGroups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize } = data;
+  const { groups: rawGroups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
   const groups = rawGroups ?? [];
 
   const flatItems = groups.flatMap((g) => g.words);
@@ -685,7 +685,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <div className="flex flex-col items-center gap-y-1">
             {displayGroupLines.map((line, i) => (
               <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
+                style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
                 {line}
               </p>
             ))}

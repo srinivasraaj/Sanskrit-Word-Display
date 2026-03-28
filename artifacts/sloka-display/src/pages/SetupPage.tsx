@@ -17,6 +17,8 @@ export interface SetupData {
   highlightedFontSize: number;
   previousFontSize: number;
   slokaFontSize: number;
+  slokaBold: boolean;
+  slokaItalic: boolean;
 }
 
 export interface SavedDraft {
@@ -27,6 +29,8 @@ export interface SavedDraft {
   highlightedFontSize: number;
   previousFontSize: number;
   slokaFontSize: number;
+  slokaBold: boolean;
+  slokaItalic: boolean;
 }
 
 interface SetupPageProps {
@@ -42,6 +46,8 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
   const [highlightedFontSize, setHighlightedFontSize] = useState(initialDraft?.highlightedFontSize ?? 48);
   const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 48);
   const [slokaFontSize, setSlokaFontSize] = useState(initialDraft?.slokaFontSize ?? 36);
+  const [slokaBold, setSlokaBold] = useState(initialDraft?.slokaBold ?? false);
+  const [slokaItalic, setSlokaItalic] = useState(initialDraft?.slokaItalic ?? false);
 
   const slokaLines = slokaText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
   const numGroups = Math.max(1, Math.ceil(slokaLines.length / 2));
@@ -65,8 +71,8 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
 
     if (groups.length === 0) return;
 
-    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize };
-    onStart({ groups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize }, draft);
+    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic };
+    onStart({ groups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic }, draft);
   };
 
   return (
@@ -205,6 +211,25 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                   max={120}
                 />
                 <span className="text-xs text-amber-600">px</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="text-xs text-amber-700 w-36">Sloka Style</Label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSlokaBold((v) => !v)}
+                    className={`px-3 py-1 rounded border text-sm font-bold transition-colors ${slokaBold ? "bg-amber-700 text-white border-amber-700" : "bg-white text-amber-700 border-amber-300 hover:border-amber-500"}`}
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSlokaItalic((v) => !v)}
+                    className={`px-3 py-1 rounded border text-sm italic transition-colors ${slokaItalic ? "bg-amber-700 text-white border-amber-700" : "bg-white text-amber-700 border-amber-300 hover:border-amber-500"}`}
+                  >
+                    I
+                  </button>
+                </div>
               </div>
             </CardContent>
           </Card>
