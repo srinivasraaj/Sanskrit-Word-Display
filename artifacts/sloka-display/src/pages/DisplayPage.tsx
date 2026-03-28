@@ -703,7 +703,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        <div className="w-full" style={{ height: "1px", background: "linear-gradient(to right, transparent 0%, rgba(180,160,120,0.35) 20%, rgba(160,130,80,0.55) 50%, rgba(180,160,120,0.35) 80%, transparent 100%)" }} />
+        <div className="w-full" style={{ height: "2px", background: "linear-gradient(to right, transparent 0%, rgba(255,200,50,0.2) 10%, rgba(255,215,0,0.7) 30%, rgba(255,230,80,0.95) 50%, rgba(255,215,0,0.7) 70%, rgba(255,200,50,0.2) 90%, transparent 100%)", boxShadow: "0 0 6px 1px rgba(255,215,0,0.25)" }} />
 
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
           style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
@@ -723,20 +723,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       <div key={globalIdx} className="flex items-center select-none"
                         style={{
                           fontSize: `${previousFontSize}px`,
-                          color: isActive ? highlightColor : isPast ? "rgba(100,60,10,0.7)" : "transparent",
+                          color: isActive ? highlightColor : "#000000",
                           fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.3)" : "scale(1)",
                           transformOrigin: "left center",
-                          transition: "transform 150ms ease-out",
+                          transition: "transform 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
                           textShadow: "none",
-                          fontWeight: isActive ? "700" : isPast ? "500" : "400",
+                          fontWeight: isActive ? "700" : "400",
                           whiteSpace: "nowrap",
-                          willChange: "transform",
+                          willChange: "transform, color",
                           contain: "layout style",
                         }}>
                         <span className="inline-block mr-1 text-sm"
-                          style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em" }}>▶</span>
+                          style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)" }}>▶</span>
                         {item}
                       </div>
                     );
