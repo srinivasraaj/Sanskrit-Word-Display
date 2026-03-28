@@ -703,7 +703,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        <div className="w-full" style={{ height: "2px", background: "linear-gradient(to right, transparent 0%, rgba(255,200,50,0.2) 10%, rgba(255,215,0,0.7) 30%, rgba(255,230,80,0.95) 50%, rgba(255,215,0,0.7) 70%, rgba(255,200,50,0.2) 90%, transparent 100%)", boxShadow: "0 0 6px 1px rgba(255,215,0,0.25)" }} />
+        <div className="w-full relative" style={{ height: "3px" }}>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, transparent 0%, rgba(255,215,0,0.15) 5%, rgba(255,215,0,1) 35%, rgba(255,255,180,1) 50%, rgba(255,215,0,1) 65%, rgba(255,215,0,0.15) 95%, transparent 100%)", boxShadow: "0 0 12px 4px rgba(255,215,0,0.6), 0 0 24px 8px rgba(255,200,0,0.3), 0 0 2px 1px rgba(255,255,200,0.9)" }} />
+        </div>
 
         <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
           style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
@@ -723,7 +725,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       <div key={globalIdx} className="flex items-center select-none"
                         style={{
                           fontSize: `${previousFontSize}px`,
-                          color: isActive ? highlightColor : "#000000",
+                          color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
                           fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
                           lineHeight: 1.3,
                           transform: isActive ? "scale(1.3)" : "scale(1)",
