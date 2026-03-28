@@ -38,7 +38,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
   const [audioFile, setAudioFile] = useState<File | null>(initialDraft?.audioFile ?? null);
   const [highlightColor, setHighlightColor] = useState(initialDraft?.highlightColor ?? "#FFD700");
   const [highlightedFontSize, setHighlightedFontSize] = useState(initialDraft?.highlightedFontSize ?? 48);
-  const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 32);
+  const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 48);
 
   const slokaLines = slokaText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
   const numGroups = Math.max(1, Math.ceil(slokaLines.length / 2));
