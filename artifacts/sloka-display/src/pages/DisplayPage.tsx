@@ -531,7 +531,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               </p>
             ))}
           </div>
-          <p className="mt-2 text-amber-600 text-xs opacity-50 font-serif italic">ఓం శాంతి శాంతి శాంతిః</p>
         </div>
 
         <div className="flex-1 flex items-start justify-center overflow-x-auto overflow-y-hidden px-6 py-6 gap-8"
