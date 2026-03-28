@@ -16,6 +16,7 @@ export interface SetupData {
   highlightColor: string;
   highlightedFontSize: number;
   previousFontSize: number;
+  slokaFontSize: number;
 }
 
 export interface SavedDraft {
@@ -25,6 +26,7 @@ export interface SavedDraft {
   highlightColor: string;
   highlightedFontSize: number;
   previousFontSize: number;
+  slokaFontSize: number;
 }
 
 interface SetupPageProps {
@@ -39,6 +41,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
   const [highlightColor, setHighlightColor] = useState(initialDraft?.highlightColor ?? "#FFD700");
   const [highlightedFontSize, setHighlightedFontSize] = useState(initialDraft?.highlightedFontSize ?? 48);
   const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 48);
+  const [slokaFontSize, setSlokaFontSize] = useState(initialDraft?.slokaFontSize ?? 36);
 
   const slokaLines = slokaText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
   const numGroups = Math.max(1, Math.ceil(slokaLines.length / 2));
@@ -62,8 +65,8 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
 
     if (groups.length === 0) return;
 
-    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, highlightedFontSize, previousFontSize };
-    onStart({ groups, audioFile, highlightColor, highlightedFontSize, previousFontSize }, draft);
+    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize };
+    onStart({ groups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize }, draft);
   };
 
   return (
@@ -188,6 +191,18 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                   className="border-amber-200 bg-white w-24"
                   min={10}
                   max={80}
+                />
+                <span className="text-xs text-amber-600">px</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="text-xs text-amber-700 w-36">Sloka Text Size</Label>
+                <Input
+                  type="number"
+                  value={slokaFontSize}
+                  onChange={(e) => setSlokaFontSize(Number(e.target.value))}
+                  className="border-amber-200 bg-white w-24"
+                  min={12}
+                  max={120}
                 />
                 <span className="text-xs text-amber-600">px</span>
               </div>
