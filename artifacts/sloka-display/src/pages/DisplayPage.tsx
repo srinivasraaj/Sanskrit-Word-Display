@@ -518,9 +518,24 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </span>
               </div>
               {audioDuration > 0 && (
-                <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full transition-all duration-100"
-                    style={{ width: `${progress}%` }} />
+                <div className="mt-3 relative flex items-center">
+                  <input
+                    type="range"
+                    min={0}
+                    max={audioDuration}
+                    step={0.05}
+                    value={audioCurrentTime}
+                    onChange={(e) => {
+                      const t = parseFloat(e.target.value);
+                      if (audioRef.current) audioRef.current.currentTime = t;
+                      setAudioCurrentTime(t);
+                    }}
+                    className="seek-bar w-full cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #d97706 0%, #d97706 ${progress}%, #e5e7eb ${progress}%, #e5e7eb 100%)`,
+                      accentColor: "#d97706",
+                    }}
+                  />
                 </div>
               )}
             </div>

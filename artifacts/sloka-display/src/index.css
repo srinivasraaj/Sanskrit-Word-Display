@@ -264,3 +264,33 @@
     inset: -1px;
   }
 }
+
+input[type="range"].seek-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+}
+input[type="range"].seek-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #d97706;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #d97706;
+  transition: transform 150ms;
+}
+input[type="range"].seek-bar::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+input[type="range"].seek-bar::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #d97706;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1.5px #d97706;
+}
