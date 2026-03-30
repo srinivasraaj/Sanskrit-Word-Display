@@ -318,7 +318,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }, [timingIndex]);
 
   useEffect(() => {
-    if (audioEndedInTimingRef.current && localItems.length > 0 && timingIndex > 0 && timingIndex % localItems.length === 0) {
+    // Only auto-navigate to preview after the FIRST cycle completes.
+    // For cycle 2+, the user stays on the timing screen to mark more cycles.
+    if (audioEndedInTimingRef.current && timingIndex === localItems.length) {
       audioEndedInTimingRef.current = false;
       if (goToPlaybackTimerRef.current) clearTimeout(goToPlaybackTimerRef.current);
       goToPlaybackTimerRef.current = setTimeout(() => {
