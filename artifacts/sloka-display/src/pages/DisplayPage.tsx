@@ -494,7 +494,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const nw = localItemsLenRef.current;
     const curTi = timingIndexRef.current;
     if (nw === 0) return;
-    const cycleIndex = curTi === 0 ? 0 : Math.floor((curTi - 1) / nw);
+    const cycleIndex = Math.floor(curTi / nw);
     const cycleEnd = (cycleIndex + 1) * nw;
     timingIndexRef.current = cycleEnd;
     audioEndedInTimingRef.current = false;
@@ -504,14 +504,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const markGroupStart = (groupIdx: number) => {
     const nw = localItemsLenRef.current;
     const curTi = timingIndexRef.current;
-    // Determine which cycle the user is currently in
-    const cycleIndex = nw === 0 ? 0 : (curTi === 0 ? 0 : Math.floor((curTi - 1) / nw));
-    const cycleOffset = cycleIndex * nw;
-    const startIdx = cycleOffset + groupStartIndices[groupIdx];
-    const groupEndIdx = cycleOffset + (groupIdx + 1 < groupStartIndices.length
-      ? groupStartIndices[groupIdx + 1]
-      : nw);
-    const existing = [...timestampsRef.current];
+    if (nw === 0) return;
+    const gStart = groupStartIndices[groupIdx];
+    const gEnd = groupIdx + 1 < groupStartIndices.length ? groupStartIndices[groupIdx + 1] : nw;
+    const curCycleIndex = Math.floor(curTi / nw);
+    const curCycleOffset = curCycleIndex * nw;
+    const ts = timestampsRef.current;
+    // If this group already has any marks in the current cycle → start a NEW cycle
+    const hasMarks = ts.slice(curCycleOffset + gStart, curCycleOffset + gEnd)
+      .some(t => t !== undefined && t !== null);
+    const targetCycleOffset = hasMarks ? (curCycleIndex + 1) * nw : curCycleOffset;
+    const startIdx = targetCycleOffset + gStart;
+    const groupEndIdx = targetCycleOffset + gEnd;
+    const existing = [...ts];
     while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
     for (let i = startIdx; i < groupEndIdx; i++) {
       existing[i] = undefined as unknown as number;
@@ -527,7 +532,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
     const nw = localItemsLenRef.current;
     const curTi = timingIndexRef.current;
-    const cycleIndex = nw === 0 ? 0 : (curTi === 0 ? 0 : Math.floor((curTi - 1) / nw));
+    const cycleIndex = Math.floor(curTi / nw);
     const cycleOffset = cycleIndex * nw;
     const startIdx = cycleOffset + groupStartIndices[groupIdx];
     const groupEndIdx = cycleOffset + (groupIdx + 1 < groupStartIndices.length
@@ -798,12 +803,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   if (phase === "timing") {
     const numWords = localItems.length;
-    // Cycle-relative index: which word within the current cycle are we on?
-    const currentCycleIndex = numWords === 0 ? 0 : (timingIndex === 0 ? 0 : Math.floor((timingIndex - 1) / numWords));
+    // currentCycleIndex: which cycle are we in right now (0-based)
+    // timingIndex=0 → cycle 0 (word 0), timingIndex=46 → cycle 1 (word 0), etc.
+    const currentCycleIndex = numWords === 0 ? 0 : Math.floor(timingIndex / numWords);
     const currentCycleOffset = currentCycleIndex * numWords;
-    const cycleTimingIndex = timingIndex - currentCycleOffset; // 0..numWords
+    const cycleTimingIndex = timingIndex - currentCycleOffset; // 0..numWords-1
     const numCycles = currentCycleIndex + 1;
-    const cycleComplete = cycleTimingIndex === numWords && numWords > 0;
+    // cycleComplete = we just finished a cycle and are sitting at the start of the next one
+    const cycleComplete = cycleTimingIndex === 0 && timingIndex > 0;
 
     const timingGroup = getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
     const timingGroupLines = groups[timingGroup]?.lines ?? [];
@@ -846,7 +853,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         {cycleComplete && (
           <div className="flex items-center gap-2 px-4 py-1.5 bg-green-50 border-b border-green-200 text-green-800 text-xs font-medium">
             <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-            Cycle {numCycles} complete. Play audio at a new position and press Enter to mark the sloka again (Cycle {numCycles + 1}).
+            Cycle {numCycles - 1} done. Ready for Cycle {numCycles} — seek audio to the next occurrence and press Enter to start marking.
           </div>
         )}
 
@@ -875,9 +882,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 {!audioFile
                   ? "No audio file uploaded. Go back to Setup and add an audio file."
                   : cycleComplete
-                  ? numCycles > 1
-                    ? `Cycle ${numCycles} complete! Click Done to preview, or play audio and press Enter to mark this sloka again (Cycle ${numCycles + 1}).`
-                    : "All words timed! Click Done to preview, or play audio at a different position and press Enter to mark this sloka again (e.g., when it repeats)."
+                  ? `Cycle ${numCycles - 1} done. Seek audio to the next occurrence and press Enter to mark Cycle ${numCycles}, or click Done to preview.`
                   : `Play audio → press Enter when you hear "${localItems[cycleTimingIndex]}"`}
               </p>
               <input
