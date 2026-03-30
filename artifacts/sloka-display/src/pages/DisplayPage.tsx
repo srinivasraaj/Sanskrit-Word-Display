@@ -23,7 +23,7 @@ function drawCanvasFrame(
   activeIdx: number,
   ds: {
     groupLines: string[]; groupWords: string[]; groupStart: number;
-    slokaFontSize: number; previousFontSize: number; highlightColor: string;
+    slokaFontSize: number; previousFontSize: number; highlightedFontSize: number; highlightColor: string;
     slokaColor: string; overlayTextColor: string; pastWordColor: string;
     slokaBold: boolean; slokaItalic: boolean; highlightCleared: boolean;
     overlays: OverlayMarker[]; localItems: string[];
@@ -122,12 +122,13 @@ function drawCanvasFrame(
   ctx.fill();
 
   const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
+  const WFA = Math.max(14, Math.min(ds.highlightedFontSize, 48));
   const ROWS = 3;
   const startX = W * 0.1;
-  const rowGap = Math.max(WF * 2.4, 56);
+  const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
   const wordsY = divY + 48;
 
-  ctx.font = `bold ${WF * 1.3}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+  ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   let maxW = 60;
   ds.groupWords.forEach((_, i) => {
     const item = ds.localItems[ds.groupStart + i];
@@ -151,7 +152,7 @@ function drawCanvasFrame(
     const x = startX + col * colGap;
     const y = wordsY + row * rowGap;
     if (isActive) {
-      ctx.font = `bold ${WF * 1.3}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
       const arrowW = ctx.measureText("▶ ").width;
       ctx.fillText("▶ ", x, y);
@@ -215,6 +216,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const lastAudioTimeUpdateRef = useRef(0);
   const goToPlaybackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastWordClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastClearedIdxRef = useRef<number | null>(null);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -225,6 +227,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     groupStart: 0,
     slokaFontSize: 32,
     previousFontSize: 28,
+    highlightedFontSize: 48,
     highlightColor: "#f59e0b",
     slokaColor: "#000000",
     overlayTextColor: "#1a1a1a",
@@ -265,6 +268,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       groupStart: groupStartIndices[displayGroup] ?? 0,
       slokaFontSize,
       previousFontSize,
+      highlightedFontSize,
       highlightColor,
       slokaColor,
       overlayTextColor,
@@ -346,27 +350,32 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       }
     }
     if (active !== lastActiveRef.current) {
-      lastActiveRef.current = active;
-      setHighlightCleared(false);
-      setCurrentIndex(active);
-      // Clear any pending last-word highlight timer on every index change.
-      if (lastWordClearTimerRef.current) {
-        clearTimeout(lastWordClearTimerRef.current);
-        lastWordClearTimerRef.current = null;
-      }
-      // If this is the last valid timestamp, schedule clearing the highlight after 5s.
-      const lastValidIdx = ts.reduce<number>((last, v, i) => v != null ? i : last, -1);
-      const isLastWord = active >= 0 && active === lastValidIdx;
-      if (isLastWord) {
-        lastWordClearTimerRef.current = setTimeout(() => {
+      // If the incoming active word is the one we intentionally cleared, just
+      // silently re-sync lastActiveRef so the tick stays quiet — do NOT restore
+      // the highlight or cancel the cleared state.
+      if (active === lastClearedIdxRef.current) {
+        lastActiveRef.current = active;
+      } else {
+        // Genuinely different word — clear any intentional-clear flag and restore.
+        lastClearedIdxRef.current = null;
+        lastActiveRef.current = active;
+        setHighlightCleared(false);
+        setCurrentIndex(active);
+        // Clear any pending last-word highlight timer on every real index change.
+        if (lastWordClearTimerRef.current) {
+          clearTimeout(lastWordClearTimerRef.current);
           lastWordClearTimerRef.current = null;
-          // Use a dedicated state flag instead of setCurrentIndex(-1).
-          // setCurrentIndex(-1) can be overridden by the tick loop on the very next
-          // frame (it sees active=lastValidIdx != lastActiveRef=-1 and re-applies).
-          // highlightCleared is only reset when a genuinely NEW word becomes active,
-          // so it is immune to the tick re-applying the same last-word index.
-          setHighlightCleared(true);
-        }, 5000);
+        }
+        // If this is the last valid timestamp, schedule clearing the highlight after 5s.
+        const lastValidIdx = ts.reduce<number>((last, v, i) => v != null ? i : last, -1);
+        const isLastWord = active >= 0 && active === lastValidIdx;
+        if (isLastWord) {
+          lastWordClearTimerRef.current = setTimeout(() => {
+            lastWordClearTimerRef.current = null;
+            lastClearedIdxRef.current = lastValidIdx;
+            setHighlightCleared(true);
+          }, 5000);
+        }
       }
     }
 
@@ -551,6 +560,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
     lastActiveRef.current = -1;
+    lastClearedIdxRef.current = null;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
@@ -565,6 +575,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
+    lastClearedIdxRef.current = null;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
@@ -688,6 +699,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimestamps([...existing]);
     setTimingIndex(startIdx);
     if (resetAudio) setAudioCurrentTime(0);
+    lastClearedIdxRef.current = null;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setRetimeMenuGroup(null);
@@ -775,6 +787,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimestamps([]);
     setTimingIndex(0);
     setAudioCurrentTime(0);
+    lastClearedIdxRef.current = null;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
@@ -787,6 +800,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     audio.currentTime = 0;
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
+    lastClearedIdxRef.current = null;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
@@ -850,6 +864,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       if (audio) { audio.pause(); audio.currentTime = 0; }
       lastActiveRef.current = -1;
       lastDisplayGroupRef.current = 0;
+      lastClearedIdxRef.current = null;
       setHighlightCleared(false);
       setCurrentIndex(-1);
       setDisplayGroup(0);
@@ -1659,13 +1674,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           return (
                             <div key={globalIdx} className="flex items-center select-none"
                               style={{
-                                fontSize: `${previousFontSize}px`,
+                                fontSize: isActive ? `${highlightedFontSize}px` : `${previousFontSize}px`,
                                 color: isActive ? highlightColor : isPast ? pastWordColor : "transparent",
                                 fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                 lineHeight: 1.3,
-                                transform: isActive ? "scale(1.3)" : "scale(1)",
+                                transform: "scale(1)",
                                 transformOrigin: "left center",
-                                transition: "transform 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
+                                transition: "font-size 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
                                 textShadow: "none",
                                 fontWeight: isActive ? "700" : "400",
                                 whiteSpace: "nowrap",
