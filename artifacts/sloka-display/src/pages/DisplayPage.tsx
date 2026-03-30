@@ -485,33 +485,48 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
     lastActiveRef.current = -1;
+    lastDisplayGroupRef.current = 0;
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
     setDisplayGroup(0);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
   };
 
-  const handlePlaybackSeek = (t: number) => {
-    if (audioRef.current) audioRef.current.currentTime = t;
-    setAudioCurrentTime(t);
+  const handlePlaybackSeek = (seekT: number) => {
+    if (audioRef.current) audioRef.current.currentTime = seekT;
+    setAudioCurrentTime(seekT);
     const ts = timestampsRef.current;
-    const ahead = t + playbackOffsetRef.current;
+    const ahead = seekT + playbackOffsetRef.current;
     let active = -1;
     for (let i = ts.length - 1; i >= 0; i--) {
       if (ts[i] != null && ahead >= ts[i]) { active = i; break; }
     }
     lastActiveRef.current = active;
     setCurrentIndex(active);
-    if (active >= 0) {
-      const wordIdx = localItems.length > 0 ? active % localItems.length : active;
-      let g = 0;
-      for (let i = groupStartIndices.length - 1; i >= 0; i--) {
-        if (wordIdx >= groupStartIndices[i]) { g = i; break; }
+    // Compute display group from transition times (if set) or fall back to word position
+    const nw = localItems.length;
+    const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
+    const gtt = groupTransitionTimesRef.current;
+    const numTrans = Math.max(0, groups.length - 1);
+    const cycleOffset = cycleIdx * numTrans;
+    const hasTransTimes = numTrans > 0 &&
+      gtt.slice(cycleOffset, cycleOffset + numTrans).some(x => x !== undefined && x !== null);
+    let newGroup = 0;
+    if (hasTransTimes) {
+      for (let tr = numTrans - 1; tr >= 0; tr--) {
+        const transTime = gtt[cycleOffset + tr];
+        if (transTime !== undefined && transTime !== null && ahead >= transTime) {
+          newGroup = Math.min(tr + 1, groups.length - 1); break;
+        }
       }
-      setDisplayGroup(g);
-    } else {
-      setDisplayGroup(0);
+    } else if (active >= 0) {
+      const wordIdx = nw > 0 ? active % nw : active;
+      for (let i = groupStartIndices.length - 1; i >= 0; i--) {
+        if (wordIdx >= groupStartIndices[i]) { newGroup = i; break; }
+      }
     }
+    lastDisplayGroupRef.current = newGroup;
+    setDisplayGroup(newGroup);
   };
 
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
@@ -656,6 +671,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (!audio) return;
     audio.currentTime = 0;
     lastActiveRef.current = -1;
+    lastDisplayGroupRef.current = 0;
     setCurrentIndex(-1);
     setDisplayGroup(0);
     const playPromise = audio.play();
@@ -717,6 +733,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       const audio = audioRef.current;
       if (audio) { audio.pause(); audio.currentTime = 0; }
       lastActiveRef.current = -1;
+      lastDisplayGroupRef.current = 0;
       setCurrentIndex(-1);
       setDisplayGroup(0);
       setAudioCurrentTime(0);
