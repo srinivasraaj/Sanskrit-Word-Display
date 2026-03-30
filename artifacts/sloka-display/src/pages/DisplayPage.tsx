@@ -468,14 +468,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
 
-  const jumpToGroup = (groupIdx: number) => {
+  const markGroupStart = (groupIdx: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
     const startIdx = groupStartIndices[groupIdx];
-    const trimmed = timestampsRef.current.slice(0, startIdx);
-    timestampsRef.current = trimmed;
-    timingIndexRef.current = startIdx;
+    const t = Math.max(0, audio.currentTime - 1);
+    const preserved = timestampsRef.current.slice(0, startIdx);
+    preserved[startIdx] = t;
+    timestampsRef.current = [...preserved];
+    timingIndexRef.current = startIdx + 1;
     audioEndedInTimingRef.current = false;
-    setTimestamps([...trimmed]);
-    setTimingIndex(startIdx);
+    setTimestamps([...preserved]);
+    setTimingIndex(startIdx + 1);
     setRetimeMenuGroup(null);
   };
 
@@ -906,15 +910,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     <div key={groupIdx}>
                       <div className={`flex items-center justify-between mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
                         <button
-                          onClick={() => jumpToGroup(groupIdx)}
-                          title="Click to jump timing cursor to this group"
+                          onClick={() => markGroupStart(groupIdx)}
+                          title="Click to mark this group's start at the current audio position"
                           className={`text-xs font-semibold flex items-center gap-1 rounded px-1 py-0.5 transition-colors
                             ${isCurrentGroup
                               ? "text-amber-700 bg-amber-50 hover:bg-amber-100"
                               : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
                         >
                           Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
-                          <span className="opacity-50 text-[9px] leading-none">▶</span>
+                          <span className="opacity-50 text-[9px] leading-none">●</span>
                         </button>
                         {groupFullyTimed && (
                           retimeMenuGroup === groupIdx ? (
