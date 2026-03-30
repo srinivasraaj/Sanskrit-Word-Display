@@ -44,7 +44,7 @@ function drawCanvasFrame(
 
   if (activeOv) {
     const fontSize = Math.max(28, Math.min(64, W * 0.045));
-    ctx.font = `bold ${fontSize}px 'Mandali','Noto Serif Telugu','Noto Sans Telugu',Georgia,serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
     ctx.fillStyle = "#1a1a1a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -66,7 +66,7 @@ function drawCanvasFrame(
   const SF = Math.max(16, Math.min(ds.slokaFontSize, 42));
   const fontStyle = ds.slokaItalic ? "italic " : "";
   const fontWeight = ds.slokaBold ? "bold " : "";
-  ctx.font = `${fontStyle}${fontWeight}${SF}px 'Mandali','Noto Serif Telugu','Noto Sans Telugu',Georgia,serif`;
+  ctx.font = `${fontStyle}${fontWeight}${SF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   ctx.fillStyle = "#000000";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
@@ -100,7 +100,7 @@ function drawCanvasFrame(
   const rowGap = Math.max(WF * 2.4, 56);
   const wordsY = divY + 48;
 
-  ctx.font = `bold ${WF * 1.3}px 'Mandali','Noto Serif Telugu','Noto Sans Telugu',Georgia,serif`;
+  ctx.font = `bold ${WF * 1.3}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   let maxW = 60;
   ds.groupWords.forEach((_, i) => {
     const item = ds.localItems[ds.groupStart + i];
@@ -124,13 +124,13 @@ function drawCanvasFrame(
     const x = startX + col * colGap;
     const y = wordsY + row * rowGap;
     if (isActive) {
-      ctx.font = `bold ${WF * 1.3}px 'Mandali','Noto Serif Telugu','Noto Sans Telugu',Georgia,serif`;
+      ctx.font = `bold ${WF * 1.3}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
       const arrowW = ctx.measureText("▶ ").width;
       ctx.fillText("▶ ", x, y);
       ctx.fillText(item, x + arrowW, y);
     } else {
-      ctx.font = `${WF}px 'Mandali','Noto Serif Telugu','Noto Sans Telugu',Georgia,serif`;
+      ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = "#000000";
       ctx.fillText(item, x, y);
     }
@@ -1025,7 +1025,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <div className="flex flex-col items-center gap-y-1">
               {timingGroupLines.map((line, i) => (
                 <p key={i} className="font-serif leading-relaxed text-center"
-                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif" }}>
+                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}>
                   {line}
                 </p>
               ))}
@@ -1317,7 +1317,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                       value={editValue}
                                       onChange={(e) => setEditValue(e.target.value)}
                                       className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-                                      style={{ fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif" }}
+                                      style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}
                                       onKeyDown={(e) => {
                                         if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
                                         if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
@@ -1336,7 +1336,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                       className="font-serif"
                                       onClick={() => !isCurrent && jumpToWord(i)}
                                       style={{
-                                        fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif",
+                                        fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                         fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
                                         color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
                                         fontWeight: isCurrent ? "700" : "400",
@@ -1522,7 +1522,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 {ov.text && (
                   <p className="text-center font-semibold leading-tight w-full"
                     style={{
-                      fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif",
+                      fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                       fontSize: "clamp(28px, 5vw, 64px)",
                       color: "#1a1a1a",
                       padding: "0 2%",
@@ -1547,7 +1547,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <div className="flex flex-col items-center gap-y-1">
                   {displayGroupLines.map((line, i) => (
                     <p key={i} className="font-serif leading-relaxed text-center"
-                      style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
+                      style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
                       {line}
                     </p>
                   ))}
@@ -1589,7 +1589,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                               style={{
                                 fontSize: `${previousFontSize}px`,
                                 color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
-                                fontFamily: "'Mandali', 'Noto Serif Telugu', 'Noto Sans Telugu', Georgia, serif",
+                                fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                 lineHeight: 1.3,
                                 transform: isActive ? "scale(1.3)" : "scale(1)",
                                 transformOrigin: "left center",
