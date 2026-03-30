@@ -24,7 +24,7 @@ function drawCanvasFrame(
   ds: {
     groupLines: string[]; groupWords: string[]; groupStart: number;
     slokaFontSize: number; previousFontSize: number; highlightColor: string;
-    slokaColor: string; overlayTextColor: string;
+    slokaColor: string; overlayTextColor: string; pastWordColor: string;
     slokaBold: boolean; slokaItalic: boolean;
     overlays: OverlayMarker[]; localItems: string[];
   },
@@ -158,14 +158,14 @@ function drawCanvasFrame(
       ctx.fillText(item, x + arrowW, y);
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-      ctx.fillStyle = "#000000";
+      ctx.fillStyle = ds.pastWordColor;
       ctx.fillText(item, x, y);
     }
   });
 }
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
-  const { groups: rawGroups, audioFile, highlightColor, slokaColor, overlayTextColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
+  const { groups: rawGroups, audioFile, highlightColor, slokaColor, overlayTextColor, pastWordColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
   const groups = rawGroups ?? [];
 
   const flatItems = groups.flatMap((g) => g.words);
@@ -227,6 +227,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     highlightColor: "#f59e0b",
     slokaColor: "#000000",
     overlayTextColor: "#1a1a1a",
+    pastWordColor: "#000000",
     slokaBold: false,
     slokaItalic: false,
     overlays: [] as OverlayMarker[],
@@ -265,6 +266,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       highlightColor,
       slokaColor,
       overlayTextColor,
+      pastWordColor,
       slokaBold,
       slokaItalic,
       overlays,
@@ -1644,7 +1646,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             <div key={globalIdx} className="flex items-center select-none"
                               style={{
                                 fontSize: `${previousFontSize}px`,
-                                color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
+                                color: isActive ? highlightColor : isPast ? pastWordColor : "transparent",
                                 fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                 lineHeight: 1.3,
                                 transform: isActive ? "scale(1.3)" : "scale(1)",

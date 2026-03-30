@@ -17,6 +17,7 @@ export interface SetupData {
   highlightColor: string;
   slokaColor: string;
   overlayTextColor: string;
+  pastWordColor: string;
   highlightedFontSize: number;
   previousFontSize: number;
   slokaFontSize: number;
@@ -31,6 +32,7 @@ export interface SavedDraft {
   highlightColor: string;
   slokaColor: string;
   overlayTextColor: string;
+  pastWordColor: string;
   highlightedFontSize: number;
   previousFontSize: number;
   slokaFontSize: number;
@@ -50,6 +52,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
   const [highlightColor, setHighlightColor] = useState(initialDraft?.highlightColor ?? "#FFD700");
   const [slokaColor, setSlokaColor] = useState(initialDraft?.slokaColor ?? "#000000");
   const [overlayTextColor, setOverlayTextColor] = useState(initialDraft?.overlayTextColor ?? "#1a1a1a");
+  const [pastWordColor, setPastWordColor] = useState(initialDraft?.pastWordColor ?? "#000000");
   const [highlightedFontSize, setHighlightedFontSize] = useState(initialDraft?.highlightedFontSize ?? 48);
   const [previousFontSize, setPreviousFontSize] = useState(initialDraft?.previousFontSize ?? 48);
   const [slokaFontSize, setSlokaFontSize] = useState(initialDraft?.slokaFontSize ?? 36);
@@ -66,6 +69,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
       highlightColor,
       slokaColor,
       overlayTextColor,
+      pastWordColor,
       highlightedFontSize,
       previousFontSize,
       slokaFontSize,
@@ -93,6 +97,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
         if (json.highlightColor) setHighlightColor(json.highlightColor);
         if (json.slokaColor) setSlokaColor(json.slokaColor);
         if (json.overlayTextColor) setOverlayTextColor(json.overlayTextColor);
+        if (json.pastWordColor) setPastWordColor(json.pastWordColor);
         if (json.highlightedFontSize) setHighlightedFontSize(json.highlightedFontSize);
         if (json.previousFontSize) setPreviousFontSize(json.previousFontSize);
         if (json.slokaFontSize) setSlokaFontSize(json.slokaFontSize);
@@ -128,8 +133,8 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
 
     if (groups.length === 0) return;
 
-    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, slokaColor, overlayTextColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic };
-    onStart({ groups, audioFile, highlightColor, slokaColor, overlayTextColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic }, draft);
+    const draft: SavedDraft = { slokaText, wordsTexts, audioFile, highlightColor, slokaColor, overlayTextColor, pastWordColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic };
+    onStart({ groups, audioFile, highlightColor, slokaColor, overlayTextColor, pastWordColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic }, draft);
   };
 
   return (
@@ -267,6 +272,18 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                     className="w-10 h-8 rounded cursor-pointer border border-amber-200"
                   />
                   <span className="text-sm text-amber-800">{overlayTextColor}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="text-xs text-amber-700 w-36">Past Word Color</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={pastWordColor}
+                    onChange={(e) => setPastWordColor(e.target.value)}
+                    className="w-10 h-8 rounded cursor-pointer border border-amber-200"
+                  />
+                  <span className="text-sm text-amber-800">{pastWordColor}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
