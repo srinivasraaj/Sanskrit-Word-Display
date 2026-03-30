@@ -392,15 +392,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const handleEnterTiming = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !isPlaying) return;
-    const idx = timingIndexRef.current;
+    let idx = timingIndexRef.current;
     if (idx >= localItems.length) return;
     const t = Math.max(0, audio.currentTime - 1);
     const next = [...timestampsRef.current];
     next[idx] = t;
+    // Advance past any positions already marked (from preserved future groups)
+    let nextIdx = idx + 1;
+    while (nextIdx < localItems.length && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
+      nextIdx++;
+    }
     timestampsRef.current = next;
-    timingIndexRef.current = idx + 1;
+    timingIndexRef.current = nextIdx;
     setTimestamps(next);
-    setTimingIndex(idx + 1);
+    setTimingIndex(nextIdx);
   }, [isPlaying, localItems.length]);
 
   useEffect(() => {
@@ -472,13 +477,23 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = audioRef.current;
     if (!audio) return;
     const startIdx = groupStartIndices[groupIdx];
+    const groupEndIdx = groupIdx + 1 < groupStartIndices.length
+      ? groupStartIndices[groupIdx + 1]
+      : localItemsLenRef.current;
     const t = Math.max(0, audio.currentTime - 1);
-    const preserved = timestampsRef.current.slice(0, startIdx);
-    preserved[startIdx] = t;
-    timestampsRef.current = [...preserved];
+    const existing = [...timestampsRef.current];
+    // Extend array if needed so indices beyond group end are accessible
+    while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
+    // Set first word of this group to current time
+    existing[startIdx] = t;
+    // Clear only the remaining words within this group so user re-marks them
+    for (let i = startIdx + 1; i < groupEndIdx; i++) {
+      existing[i] = undefined as unknown as number;
+    }
+    timestampsRef.current = existing;
     timingIndexRef.current = startIdx + 1;
     audioEndedInTimingRef.current = false;
-    setTimestamps([...preserved]);
+    setTimestamps([...existing]);
     setTimingIndex(startIdx + 1);
     setRetimeMenuGroup(null);
   };
@@ -501,6 +516,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (resetAudio) setAudioCurrentTime(0);
     setCurrentIndex(-1);
     setRetimeMenuGroup(null);
+  };
+
+  const goBackToTiming = () => {
+    if (goToPlaybackTimerRef.current) { clearTimeout(goToPlaybackTimerRef.current); goToPlaybackTimerRef.current = null; }
+    const audio = audioRef.current;
+    if (audio) { audio.pause(); }
+    setIsPlaying(false);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    setPhase("timing");
   };
 
   const restartTiming = () => {
@@ -1077,8 +1101,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       {!isRecording && (
         <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-500 hover:text-gray-800">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Re-time
+            <Button variant="ghost" size="sm" onClick={goBackToTiming} className="text-gray-500 hover:text-gray-800">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Timing
+            </Button>
+            <Button variant="ghost" size="sm" onClick={restartTiming} className="text-gray-400 hover:text-red-600" title="Clear all timestamps and start over">
+              <RotateCcw className="w-4 h-4 mr-1" /> Restart
             </Button>
             <Button variant="ghost" size="sm" onClick={resetPreview} className="text-gray-500 hover:text-gray-800">
               <RotateCcw className="w-4 h-4 mr-1" /> Reset
