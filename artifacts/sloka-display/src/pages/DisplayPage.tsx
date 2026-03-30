@@ -252,15 +252,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setIsPlaying(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (phaseRef.current === "timing") {
-        const duration = audio.duration;
         const next = [...timestampsRef.current];
         const startIdx = timingIndexRef.current;
         const nw = localItemsLenRef.current;
-        // Fill only up to the end of the current cycle, not beyond
+        // Don't fill unmarked positions — partial cycles are allowed.
+        // Just advance timingIndex to the cycle boundary so the next cycle can start.
         const cycleEnd = nw > 0 ? (Math.floor(startIdx / nw) + 1) * nw : startIdx;
-        for (let i = startIdx; i < cycleEnd; i++) {
-          if (next[i] === undefined || next[i] === null) next[i] = duration;
-        }
         timestampsRef.current = next;
         timingIndexRef.current = cycleEnd;
         setTimestamps([...next]);
@@ -318,15 +315,22 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }, [timingIndex]);
 
   useEffect(() => {
-    // Only auto-navigate to preview after the FIRST cycle completes.
-    // For cycle 2+, the user stays on the timing screen to mark more cycles.
+    // Auto-navigate to preview only after the first cycle AND all words were marked.
+    // Partial cycles or multi-cycle use: user clicks Done manually.
     if (audioEndedInTimingRef.current && timingIndex === localItems.length) {
-      audioEndedInTimingRef.current = false;
-      if (goToPlaybackTimerRef.current) clearTimeout(goToPlaybackTimerRef.current);
-      goToPlaybackTimerRef.current = setTimeout(() => {
-        goToPlaybackTimerRef.current = null;
-        goToPlayback();
-      }, 600);
+      const ts = timestampsRef.current;
+      const allMarked = localItems.length > 0 &&
+        ts.slice(0, localItems.length).every(t => t !== undefined && t !== null);
+      if (allMarked) {
+        audioEndedInTimingRef.current = false;
+        if (goToPlaybackTimerRef.current) clearTimeout(goToPlaybackTimerRef.current);
+        goToPlaybackTimerRef.current = setTimeout(() => {
+          goToPlaybackTimerRef.current = null;
+          goToPlayback();
+        }, 600);
+      } else {
+        audioEndedInTimingRef.current = false;
+      }
     }
   }, [timingIndex]);
 
@@ -485,6 +489,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   };
 
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
+
+  const finishCycle = () => {
+    const nw = localItemsLenRef.current;
+    const curTi = timingIndexRef.current;
+    if (nw === 0) return;
+    const cycleIndex = curTi === 0 ? 0 : Math.floor((curTi - 1) / nw);
+    const cycleEnd = (cycleIndex + 1) * nw;
+    timingIndexRef.current = cycleEnd;
+    audioEndedInTimingRef.current = false;
+    setTimingIndex(cycleEnd);
+  };
 
   const markGroupStart = (groupIdx: number) => {
     const nw = localItemsLenRef.current;
@@ -889,6 +904,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <Button onClick={restartTiming} variant="ghost" size="sm" className="text-gray-500 hover:text-gray-800">
                   <RotateCcw className="w-4 h-4 mr-1" /> Restart
                 </Button>
+                {cycleTimingIndex > 0 && !cycleComplete && (
+                  <Button onClick={finishCycle} variant="ghost" size="sm"
+                    className="text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400"
+                    title="Close this cycle and start marking the next occurrence">
+                    ＋ Next Cycle
+                  </Button>
+                )}
                 <span className="text-gray-400 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
                 <span className="text-gray-400 text-xs">
                   {cycleTimingIndex}/{numWords} timed
