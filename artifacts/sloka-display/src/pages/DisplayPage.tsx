@@ -109,8 +109,10 @@ function drawCanvasFrame(
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
     if (!item) return;
-    const isActive = globalIdx === activeIdx;
-    const isPast = globalIdx < activeIdx;
+    const numWordsInCanvas = ds.localItems.length;
+    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : activeIdx;
+    const isActive = globalIdx === activeWordIdx;
+    const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
     if (!isActive && !isPast) return;
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
@@ -253,13 +255,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         const duration = audio.duration;
         const next = [...timestampsRef.current];
         const startIdx = timingIndexRef.current;
-        for (let i = startIdx; i < localItemsLenRef.current; i++) {
+        const nw = localItemsLenRef.current;
+        // Fill only up to the end of the current cycle, not beyond
+        const cycleEnd = nw > 0 ? (Math.floor(startIdx / nw) + 1) * nw : startIdx;
+        for (let i = startIdx; i < cycleEnd; i++) {
           if (next[i] === undefined || next[i] === null) next[i] = duration;
         }
         timestampsRef.current = next;
-        timingIndexRef.current = localItemsLenRef.current;
+        timingIndexRef.current = cycleEnd;
         setTimestamps([...next]);
-        setTimingIndex(localItemsLenRef.current);
+        setTimingIndex(cycleEnd);
         audioEndedInTimingRef.current = true;
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -313,7 +318,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }, [timingIndex]);
 
   useEffect(() => {
-    if (audioEndedInTimingRef.current && timingIndex >= localItems.length) {
+    if (audioEndedInTimingRef.current && localItems.length > 0 && timingIndex > 0 && timingIndex % localItems.length === 0) {
       audioEndedInTimingRef.current = false;
       if (goToPlaybackTimerRef.current) clearTimeout(goToPlaybackTimerRef.current);
       goToPlaybackTimerRef.current = setTimeout(() => {
@@ -338,9 +343,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   useEffect(() => {
     if (currentIndex < 0) return;
+    const wordIdx = localItems.length > 0 ? currentIndex % localItems.length : currentIndex;
     let g = 0;
     for (let i = groupStartIndices.length - 1; i >= 0; i--) {
-      if (currentIndex >= groupStartIndices[i]) { g = i; break; }
+      if (wordIdx >= groupStartIndices[i]) { g = i; break; }
     }
     setDisplayGroup(g);
   }, [currentIndex]);
@@ -394,14 +400,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const handleEnterTiming = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !isPlaying) return;
+    const numWords = localItems.length;
+    if (numWords === 0) return;
     let idx = timingIndexRef.current;
-    if (idx >= localItems.length) return;
     const t = Math.max(0, audio.currentTime - 1);
     const next = [...timestampsRef.current];
     next[idx] = t;
-    // Advance past any positions already marked (from preserved future groups)
+    // Advance past already-marked positions but stay within the current cycle
+    const cycleEnd = (Math.floor(idx / numWords) + 1) * numWords;
     let nextIdx = idx + 1;
-    while (nextIdx < localItems.length && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
+    while (nextIdx < cycleEnd && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
       nextIdx++;
     }
     timestampsRef.current = next;
@@ -463,9 +471,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     lastActiveRef.current = active;
     setCurrentIndex(active);
     if (active >= 0) {
+      const wordIdx = localItems.length > 0 ? active % localItems.length : active;
       let g = 0;
       for (let i = groupStartIndices.length - 1; i >= 0; i--) {
-        if (active >= groupStartIndices[i]) { g = i; break; }
+        if (wordIdx >= groupStartIndices[i]) { g = i; break; }
       }
       setDisplayGroup(g);
     } else {
@@ -476,14 +485,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
 
   const markGroupStart = (groupIdx: number) => {
-    const startIdx = groupStartIndices[groupIdx];
-    const groupEndIdx = groupIdx + 1 < groupStartIndices.length
+    const nw = localItemsLenRef.current;
+    const curTi = timingIndexRef.current;
+    // Determine which cycle the user is currently in
+    const cycleIndex = nw === 0 ? 0 : (curTi === 0 ? 0 : Math.floor((curTi - 1) / nw));
+    const cycleOffset = cycleIndex * nw;
+    const startIdx = cycleOffset + groupStartIndices[groupIdx];
+    const groupEndIdx = cycleOffset + (groupIdx + 1 < groupStartIndices.length
       ? groupStartIndices[groupIdx + 1]
-      : localItemsLenRef.current;
+      : nw);
     const existing = [...timestampsRef.current];
-    // Extend array if needed so positions beyond group end are accessible
     while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
-    // Clear all words within this group so user re-marks them with Enter
     for (let i = startIdx; i < groupEndIdx; i++) {
       existing[i] = undefined as unknown as number;
     }
@@ -496,10 +508,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   };
 
   const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
-    const startIdx = groupStartIndices[groupIdx];
-    const groupEndIdx = groupIdx + 1 < groupStartIndices.length
+    const nw = localItemsLenRef.current;
+    const curTi = timingIndexRef.current;
+    const cycleIndex = nw === 0 ? 0 : (curTi === 0 ? 0 : Math.floor((curTi - 1) / nw));
+    const cycleOffset = cycleIndex * nw;
+    const startIdx = cycleOffset + groupStartIndices[groupIdx];
+    const groupEndIdx = cycleOffset + (groupIdx + 1 < groupStartIndices.length
       ? groupStartIndices[groupIdx + 1]
-      : localItemsLenRef.current;
+      : nw);
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -764,13 +780,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const progress = audioDuration > 0 ? (audioCurrentTime / audioDuration) * 100 : 0;
 
   if (phase === "timing") {
-    const timingGroup = getTimingDisplayGroup(timingIndex);
+    const numWords = localItems.length;
+    // Cycle-relative index: which word within the current cycle are we on?
+    const currentCycleIndex = numWords === 0 ? 0 : (timingIndex === 0 ? 0 : Math.floor((timingIndex - 1) / numWords));
+    const currentCycleOffset = currentCycleIndex * numWords;
+    const cycleTimingIndex = timingIndex - currentCycleOffset; // 0..numWords
+    const numCycles = currentCycleIndex + 1;
+    const cycleComplete = cycleTimingIndex === numWords && numWords > 0;
+
+    const timingGroup = getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
     const timingGroupLines = groups[timingGroup]?.lines ?? [];
     const currentGroupEndIdx = timingGroup + 1 < groups.length
       ? groupStartIndices[timingGroup + 1]
-      : localItems.length;
-    const isRemarkMode = timingIndex < localItems.length &&
-      timestamps.some((t, i) => i >= currentGroupEndIdx && t != null);
+      : numWords;
+    const isRemarkMode = !cycleComplete && cycleTimingIndex < numWords &&
+      timestamps.some((t, i) => i >= currentCycleOffset + currentGroupEndIdx && i < currentCycleOffset + numWords && t != null);
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
@@ -796,19 +820,26 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
         </div>
 
-        {isRemarkMode && (
+        {isRemarkMode && !cycleComplete && (
           <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 border-b border-blue-200 text-blue-700 text-xs font-medium">
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             Re-marking group {timingGroup + 1} — timings for all other groups are preserved
+          </div>
+        )}
+        {cycleComplete && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-green-50 border-b border-green-200 text-green-800 text-xs font-medium">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+            Cycle {numCycles} complete. Play audio at a new position and press Enter to mark the sloka again (Cycle {numCycles + 1}).
           </div>
         )}
 
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
             style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
-            {groups.length > 1 && (
+            {(groups.length > 1 || numCycles > 1) && (
               <p className="text-xs text-amber-500 mb-1 font-medium">
-                Group {timingGroup + 1} of {groups.length}
+                {numCycles > 1 && <span className="text-blue-500 mr-2">Cycle {numCycles}</span>}
+                {groups.length > 1 && `Group ${timingGroup + 1} of ${groups.length}`}
               </p>
             )}
             <div className="flex flex-col items-center gap-y-1">
@@ -826,9 +857,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               <p className="text-gray-600 text-sm mb-3">
                 {!audioFile
                   ? "No audio file uploaded. Go back to Setup and add an audio file."
-                  : timingIndex < localItems.length
-                  ? `Play audio → press  Enter  when you hear "${localItems[timingIndex]}"`
-                  : "All words timed! Click Done to preview."}
+                  : cycleComplete
+                  ? numCycles > 1
+                    ? `Cycle ${numCycles} complete! Click Done to preview, or play audio and press Enter to mark this sloka again (Cycle ${numCycles + 1}).`
+                    : "All words timed! Click Done to preview, or play audio at a different position and press Enter to mark this sloka again (e.g., when it repeats)."
+                  : `Play audio → press Enter when you hear "${localItems[cycleTimingIndex]}"`}
               </p>
               <input
                 ref={markersFileInputRef}
@@ -856,7 +889,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </Button>
                 <span className="text-gray-400 text-xs font-mono">{formatTime(audioCurrentTime)}</span>
                 <span className="text-gray-400 text-xs">
-                  {timingIndex}/{localItems.length} timed
+                  {cycleTimingIndex}/{numWords} timed
+                  {numCycles > 1 && <span className="ml-1 text-amber-600">(Cycle {numCycles})</span>}
                 </span>
                 <Button onClick={openAddOverlay} variant="ghost" size="sm"
                   className="text-purple-600 hover:text-purple-800 ml-auto">
@@ -965,9 +999,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               <div className="space-y-4 max-w-lg">
                 {groups.map((group, groupIdx) => {
                   const groupStart = groupStartIndices[groupIdx];
-                  const isCurrentGroup = groupIdx === getTimingDisplayGroup(timingIndex);
+                  const isCurrentGroup = groupIdx === getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
                   const groupEnd = groupStart + group.words.length;
-                  const groupFullyTimed = timingIndex >= groupEnd;
+                  const groupFullyTimed = cycleTimingIndex >= groupEnd;
                   return (
                     <div key={groupIdx}>
                       <div className={`flex items-center justify-between mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
@@ -1016,8 +1050,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         {group.words.map((_, wordIdx) => {
                           const i = groupStart + wordIdx;
                           const word = localItems[i];
-                          const isCurrent = i === timingIndex;
-                          const isDone = i < timingIndex;
+                          const isCurrent = i === cycleTimingIndex;
+                          const isDone = i < cycleTimingIndex;
                           const isEditing = editingIndex === i;
                           return (
                             <div
@@ -1031,7 +1065,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             >
                               <span className="text-xs font-mono w-12 shrink-0"
                                 style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
-                                {isDone ? formatTime(timestamps[i]) : isCurrent ? "▶ now" : `#${i + 1}`}
+                                {isDone ? formatTime(timestamps[currentCycleOffset + i]) : isCurrent ? "▶ now" : `#${i + 1}`}
                               </span>
 
                               {isEditing ? (
@@ -1257,8 +1291,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
-                          const isActive = globalIdx === currentIndex;
-                          const isPast = globalIdx < currentIndex;
+                          const activeWordIdx = currentIndex >= 0 && localItems.length > 0 ? currentIndex % localItems.length : -1;
+                          const isActive = globalIdx === activeWordIdx;
+                          const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
                           return (
                             <div key={globalIdx} className="flex items-center select-none"
                               style={{
