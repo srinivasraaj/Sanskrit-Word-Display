@@ -351,8 +351,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         lastWordClearTimerRef.current = null;
       }
       // If this is the last valid timestamp, schedule clearing the highlight after 5s.
-      const validTs = ts.filter(x => x != null);
-      const isLastWord = active >= 0 && active === validTs.length - 1;
+      const lastValidIdx = ts.reduce<number>((last, v, i) => v != null ? i : last, -1);
+      const isLastWord = active >= 0 && active === lastValidIdx;
       if (isLastWord) {
         lastWordClearTimerRef.current = setTimeout(() => {
           lastWordClearTimerRef.current = null;
