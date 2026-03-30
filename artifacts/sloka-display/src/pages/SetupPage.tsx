@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Download, Upload } from "lucide-react";
 
 export interface LineGroup {
   lines: string[];
@@ -49,6 +50,52 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
   const [slokaBold, setSlokaBold] = useState(initialDraft?.slokaBold ?? false);
   const [slokaItalic, setSlokaItalic] = useState(initialDraft?.slokaItalic ?? false);
 
+  const configFileInputRef = useRef<HTMLInputElement>(null);
+
+  const saveConfig = () => {
+    const config = {
+      version: 1,
+      slokaText,
+      wordsTexts,
+      highlightColor,
+      highlightedFontSize,
+      previousFontSize,
+      slokaFontSize,
+      slokaBold,
+      slokaItalic,
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sloka-config.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const loadConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string);
+        if (json.slokaText !== undefined) setSlokaText(json.slokaText);
+        if (Array.isArray(json.wordsTexts)) setWordsTexts(json.wordsTexts);
+        if (json.highlightColor) setHighlightColor(json.highlightColor);
+        if (json.highlightedFontSize) setHighlightedFontSize(json.highlightedFontSize);
+        if (json.previousFontSize) setPreviousFontSize(json.previousFontSize);
+        if (json.slokaFontSize) setSlokaFontSize(json.slokaFontSize);
+        if (json.slokaBold !== undefined) setSlokaBold(json.slokaBold);
+        if (json.slokaItalic !== undefined) setSlokaItalic(json.slokaItalic);
+      } catch {
+        alert("Could not read config file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   const slokaLines = slokaText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
   const numGroups = Math.max(1, Math.ceil(slokaLines.length / 2));
 
@@ -81,6 +128,18 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-amber-900 mb-1">Sanskrit Sloka Display</h1>
           <p className="text-amber-700 text-sm">Configure your sloka and word sequence</p>
+        </div>
+
+        <input ref={configFileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={loadConfig} />
+        <div className="flex justify-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => configFileInputRef.current?.click()}
+            className="border-amber-300 text-amber-700 hover:bg-amber-50">
+            <Upload className="w-4 h-4 mr-1" /> Load Config
+          </Button>
+          <Button variant="outline" size="sm" onClick={saveConfig}
+            className="border-amber-300 text-amber-700 hover:bg-amber-50">
+            <Download className="w-4 h-4 mr-1" /> Save Config
+          </Button>
         </div>
 
         <Card className="border-amber-200 shadow-md">

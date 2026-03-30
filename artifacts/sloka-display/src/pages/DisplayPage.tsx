@@ -584,7 +584,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </Button>
               </div>
               {audioDuration > 0 && (
-                <div className="mt-3 relative flex items-center">
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs font-mono text-amber-600 shrink-0 w-10 text-right">{formatTime(audioCurrentTime)}</span>
                   <input
                     type="range"
                     min={0}
@@ -596,12 +597,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       if (audioRef.current) audioRef.current.currentTime = t;
                       setAudioCurrentTime(t);
                     }}
-                    className="seek-bar w-full cursor-pointer"
+                    className="seek-bar flex-1 cursor-pointer"
                     style={{
                       background: `linear-gradient(to right, #d97706 0%, #d97706 ${progress}%, #e5e7eb ${progress}%, #e5e7eb 100%)`,
                       accentColor: "#d97706",
                     }}
                   />
+                  <span className="text-xs font-mono text-gray-400 shrink-0 w-10">{formatTime(audioDuration)}</span>
                 </div>
               )}
 
