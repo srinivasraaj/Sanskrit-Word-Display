@@ -656,6 +656,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   };
 
+  // Move the timing cursor to a specific word so it can be re-marked.
+  // Uses the current cycle index so it stays within the active cycle.
+  const jumpToWord = (wordIdx: number) => {
+    const nw = localItemsLenRef.current;
+    const newTi = currentCycleIndex * nw + wordIdx;
+    timingIndexRef.current = newTi;
+    setTimingIndex(newTi);
+  };
+
   const goBackToTiming = () => {
     if (goToPlaybackTimerRef.current) { clearTimeout(goToPlaybackTimerRef.current); goToPlaybackTimerRef.current = null; }
     const audio = audioRef.current;
@@ -1284,13 +1293,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <span className="font-serif"
+                                    <span
+                                      className="font-serif"
+                                      onClick={() => !isCurrent && jumpToWord(i)}
                                       style={{
                                         fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
                                         fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
                                         color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
                                         fontWeight: isCurrent ? "700" : "400",
-                                      }}>
+                                        cursor: isCurrent ? "default" : "pointer",
+                                      }}
+                                      title={isCurrent ? undefined : "Click to move cursor here"}
+                                    >
                                       {word}
                                     </span>
                                     <button
