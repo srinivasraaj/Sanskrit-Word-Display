@@ -561,6 +561,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setRetimeMenuGroup(null);
   };
 
+  const removeTimestamp = (cycleIdx: number, wordIdx: number) => {
+    const nw = localItemsLenRef.current;
+    const flatIdx = cycleIdx * nw + wordIdx;
+    const existing = [...timestampsRef.current];
+    if (flatIdx < existing.length) {
+      existing[flatIdx] = undefined as unknown as number;
+      timestampsRef.current = existing;
+      setTimestamps([...existing]);
+    }
+  };
+
   const goBackToTiming = () => {
     if (goToPlaybackTimerRef.current) { clearTimeout(goToPlaybackTimerRef.current); goToPlaybackTimerRef.current = null; }
     const audio = audioRef.current;
@@ -1082,59 +1093,92 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           const isCurrent = i === cycleTimingIndex;
                           const isDone = i < cycleTimingIndex;
                           const isEditing = editingIndex === i;
+                          const nw = localItems.length;
+                          const totalCycles = nw > 0 ? Math.ceil(timestamps.length / nw) : 1;
+                          const cycleChips: { cycleIdx: number; t: number }[] = [];
+                          for (let k = 0; k < totalCycles; k++) {
+                            const flatIdx = k * nw + i;
+                            const t = timestamps[flatIdx];
+                            if (t !== undefined && t !== null) cycleChips.push({ cycleIdx: k, t });
+                          }
                           return (
                             <div
                               key={i}
                               ref={isCurrent ? activeWordRef : undefined}
-                              className="group flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
+                              className="group flex flex-col px-3 py-1.5 rounded-lg transition-all"
                               style={{
                                 background: isEditing ? "#eff6ff" : isCurrent ? `${highlightColor}18` : "transparent",
                                 borderLeft: isEditing ? "3px solid #3b82f6" : isCurrent ? `3px solid ${highlightColor}` : "3px solid transparent",
                               }}
                             >
-                              <span className="text-xs font-mono w-12 shrink-0"
-                                style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
-                                {isDone ? formatTime(timestamps[currentCycleOffset + i]) : isCurrent ? "▶ now" : `#${i + 1}`}
-                              </span>
-
-                              {isEditing ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <input
-                                    ref={editInputRef}
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-                                    style={{ fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
-                                      if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
-                                    }}
-                                  />
-                                  <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="font-serif"
-                                    style={{
-                                      fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
-                                      fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
-                                      color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
-                                      fontWeight: isCurrent ? "700" : "400",
-                                    }}>
-                                    {word}
-                                  </span>
-                                  <button
-                                    onClick={() => startEdit(i)}
-                                    className="ml-auto opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-500 transition-opacity p-0.5 shrink-0"
-                                    title="Edit word"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </button>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-mono w-12 shrink-0"
+                                  style={{ color: isDone ? "#16a34a" : isCurrent ? highlightColor : "#9ca3af" }}>
+                                  {isDone ? formatTime(timestamps[currentCycleOffset + i]) : isCurrent ? "▶ now" : `#${i + 1}`}
+                                </span>
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <input
+                                      ref={editInputRef}
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      className="flex-1 bg-white text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-400"
+                                      style={{ fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") { e.stopPropagation(); confirmEdit(); }
+                                        if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
+                                      }}
+                                    />
+                                    <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="font-serif"
+                                      style={{
+                                        fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
+                                        fontSize: isCurrent ? "20px" : isDone ? "16px" : "14px",
+                                        color: isCurrent ? highlightColor : isDone ? "#374151" : "#d1d5db",
+                                        fontWeight: isCurrent ? "700" : "400",
+                                      }}>
+                                      {word}
+                                    </span>
+                                    <button
+                                      onClick={() => startEdit(i)}
+                                      className="ml-auto opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-500 transition-opacity p-0.5 shrink-0"
+                                      title="Edit word"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              {cycleChips.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-0.5 ml-[60px]">
+                                  {cycleChips.map(({ cycleIdx, t }) => (
+                                    <span
+                                      key={cycleIdx}
+                                      className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
+                                      style={{
+                                        background: cycleIdx === currentCycleIndex ? `${highlightColor}15` : "#f0fdf4",
+                                        borderColor: cycleIdx === currentCycleIndex ? highlightColor : "#86efac",
+                                        color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
+                                      }}
+                                    >
+                                      C{cycleIdx + 1}: {formatTime(t)}
+                                      <button
+                                        onClick={() => removeTimestamp(cycleIdx, i)}
+                                        className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
+                                        title={`Remove Cycle ${cycleIdx + 1} timestamp`}
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </span>
+                                  ))}
                                 </div>
                               )}
                             </div>
