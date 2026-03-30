@@ -203,7 +203,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     } else {
       audio.play();
       setIsPlaying(true);
-      if (phase === "playback") rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = requestAnimationFrame(tick);
     }
   };
 
