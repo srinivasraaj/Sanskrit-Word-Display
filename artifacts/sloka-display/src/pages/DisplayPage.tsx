@@ -609,7 +609,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const numTrans = Math.max(0, numGroupsRef.current - 1);
     if (numTrans <= 0) return;
     const nw = localItemsLenRef.current;
-    const cycleIdx = nw > 0 ? Math.floor(timingIndexRef.current / nw) : 0;
+    // Determine cycle by scanning timestamps for the active word at the current
+    // audio time — identical to how tick computes cycleIdx — so the stored
+    // transition time is always in the same cycle bucket that tick will look up.
+    const ts = timestampsRef.current;
+    const ahead = t + playbackOffsetRef.current;
+    let activeIdx = -1;
+    for (let i = ts.length - 1; i >= 0; i--) {
+      if (ts[i] != null && ahead >= ts[i]) { activeIdx = i; break; }
+    }
+    const cycleIdx = (nw > 0 && activeIdx >= 0)
+      ? Math.floor(activeIdx / nw)
+      : (nw > 0 ? Math.floor(timingIndexRef.current / nw) : 0);
     const flatIdx = cycleIdx * numTrans + transIdx;
     const existing = [...groupTransitionTimesRef.current];
     while (existing.length <= flatIdx) existing.push(undefined as unknown as number);
@@ -1122,8 +1133,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       {groupIdx > 0 && groups.length > 1 && (() => {
                         const transIdx = groupIdx - 1;
                         const numTrans = groups.length - 1;
+                        // Iterate over all cycles that could have a stored transition,
+                        // not just cycles based on words-marked progress (numCycles).
+                        // This ensures chips are visible even when only a few words are
+                        // marked but the transition was stored for a later audio cycle.
+                        const gttCycles = numTrans > 0
+                          ? Math.max(numCycles, Math.ceil((groupTransitionTimes.length || 0) / numTrans))
+                          : numCycles;
                         const transChips: { cycleIdx: number; t: number }[] = [];
-                        for (let k = 0; k < numCycles; k++) {
+                        for (let k = 0; k < gttCycles; k++) {
                           const flatIdx = k * numTrans + transIdx;
                           const tv = groupTransitionTimes[flatIdx];
                           if (tv !== undefined && tv !== null) transChips.push({ cycleIdx: k, t: tv });
