@@ -697,6 +697,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (json.overlays && Array.isArray(json.overlays)) {
           setOverlays(json.overlays);
         }
+        const audioDur = audioRef.current?.duration ?? 0;
+        if (audioDur > 0 && loaded.length > 0) {
+          const maxTs = Math.max(...loaded);
+          if (maxTs > audioDur) {
+            alert(
+              `Warning: This markers file has timestamps up to ${(maxTs / 60).toFixed(1)} min, ` +
+              `but the loaded audio is only ${(audioDur / 60).toFixed(1)} min long.\n\n` +
+              `These markers were saved with a different audio file. ` +
+              `The ${loaded.filter((t) => t > audioDur).length} affected word(s) will not highlight during playback — please re-mark them.`
+            );
+          }
+        }
       } catch {
         alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
       }
