@@ -293,6 +293,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    audioEndedInTimingRef.current = false;
     const trimmed = timestampsRef.current.slice(0, startIdx);
     timestampsRef.current = trimmed;
     timingIndexRef.current = startIdx;
