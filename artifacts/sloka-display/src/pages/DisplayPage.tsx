@@ -356,7 +356,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       if (isLastWord) {
         lastWordClearTimerRef.current = setTimeout(() => {
           lastWordClearTimerRef.current = null;
-          lastActiveRef.current = -1;
+          // Do NOT reset lastActiveRef here — if we do, the tick loop immediately
+          // re-computes active = lastValidIdx, sees it differs from -1, and
+          // restores the highlight on the very next frame. Keeping lastActiveRef
+          // at lastValidIdx prevents the tick from re-applying the highlight.
           setCurrentIndex(-1);
         }, 5000);
       }
