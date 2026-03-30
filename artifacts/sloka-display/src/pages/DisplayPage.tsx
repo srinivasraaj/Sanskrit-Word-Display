@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SetupData } from "./SetupPage";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Play, Pause, Download, Video, Square, RotateCcw, CheckCircle, Pencil, X, Check, Upload } from "lucide-react";
+import { ArrowLeft, Play, Pause, Download, Video, RotateCcw, CheckCircle, Pencil, X, Check, Upload, Plus, Image as ImageIcon, Type, Layers } from "lucide-react";
+
+export interface OverlayMarker {
+  id: string;
+  startTime: number;
+  duration: number;
+  text: string;
+  imageDataUrl: string;
+}
 
 interface DisplayPageProps {
   data: SetupData;
@@ -54,6 +62,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const lastActiveRef = useRef(-1);
   const lastAudioTimeUpdateRef = useRef(0);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
+  const overlayImageInputRef = useRef<HTMLInputElement>(null);
+
+  const [overlays, setOverlays] = useState<OverlayMarker[]>([]);
+  const [addingOverlay, setAddingOverlay] = useState(false);
+  const [pendingOverlayTime, setPendingOverlayTime] = useState(0);
+  const [newOverlayText, setNewOverlayText] = useState("");
+  const [newOverlayDuration, setNewOverlayDuration] = useState(3);
+  const [newOverlayImageDataUrl, setNewOverlayImageDataUrl] = useState("");
+  const [newOverlayImageName, setNewOverlayImageName] = useState("");
 
   const getTimingDisplayGroup = (idx: number) => {
     let g = 0;
@@ -391,10 +408,45 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     URL.revokeObjectURL(url);
   };
 
+  const openAddOverlay = () => {
+    setPendingOverlayTime(audioRef.current?.currentTime ?? 0);
+    setNewOverlayText("");
+    setNewOverlayDuration(3);
+    setNewOverlayImageDataUrl("");
+    setNewOverlayImageName("");
+    setAddingOverlay(true);
+  };
+
+  const saveOverlay = () => {
+    if (!newOverlayText.trim() && !newOverlayImageDataUrl) return;
+    const marker: OverlayMarker = {
+      id: `ov-${Date.now()}`,
+      startTime: pendingOverlayTime,
+      duration: newOverlayDuration,
+      text: newOverlayText.trim(),
+      imageDataUrl: newOverlayImageDataUrl,
+    };
+    setOverlays((prev) => [...prev, marker].sort((a, b) => a.startTime - b.startTime));
+    setAddingOverlay(false);
+  };
+
+  const deleteOverlay = (id: string) => setOverlays((prev) => prev.filter((o) => o.id !== id));
+
+  const handleOverlayImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewOverlayImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => setNewOverlayImageDataUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const downloadMarkers = () => {
     const payload = {
       words: localItems,
       timestamps,
+      overlays,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -421,6 +473,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (json.words && Array.isArray(json.words)) {
           setLocalItems(json.words);
           localItemsLenRef.current = json.words.length;
+        }
+        if (json.overlays && Array.isArray(json.overlays)) {
+          setOverlays(json.overlays);
         }
       } catch {
         alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
@@ -502,6 +557,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 className="hidden"
                 onChange={uploadMarkers}
               />
+              <input
+                ref={overlayImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleOverlayImageUpload}
+              />
               <div className="flex items-center gap-3 flex-wrap">
                 {audioFile && (
                   <Button onClick={toggleAudio} size="sm"
@@ -516,6 +578,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <span className="text-gray-400 text-xs">
                   {timingIndex}/{localItems.length} timed
                 </span>
+                <Button onClick={openAddOverlay} variant="ghost" size="sm"
+                  className="text-purple-600 hover:text-purple-800 ml-auto">
+                  <Plus className="w-4 h-4 mr-1" /> Add Overlay
+                </Button>
               </div>
               {audioDuration > 0 && (
                 <div className="mt-3 relative flex items-center">
@@ -536,6 +602,79 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       accentColor: "#d97706",
                     }}
                   />
+                </div>
+              )}
+
+              {addingOverlay && (
+                <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-purple-700 text-xs font-semibold flex items-center gap-1">
+                      <Layers className="w-3.5 h-3.5" /> Add Overlay at {formatTime(pendingOverlayTime)}
+                    </span>
+                    <button onClick={() => setAddingOverlay(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Type className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Text (optional)"
+                        value={newOverlayText}
+                        onChange={(e) => setNewOverlayText(e.target.value)}
+                        className="flex-1 border border-purple-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-purple-400"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                      <button
+                        onClick={() => overlayImageInputRef.current?.click()}
+                        className="text-xs border border-purple-200 rounded px-2 py-1 bg-white hover:bg-purple-50 text-purple-700"
+                      >
+                        {newOverlayImageName || "Upload Image (optional)"}
+                      </button>
+                      {newOverlayImageDataUrl && (
+                        <button onClick={() => { setNewOverlayImageDataUrl(""); setNewOverlayImageName(""); }} className="text-gray-400 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
+                      )}
+                    </div>
+                    {newOverlayImageDataUrl && (
+                      <img src={newOverlayImageDataUrl} alt="" className="max-h-16 rounded border border-purple-200 object-contain" />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Show for</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={newOverlayDuration}
+                        onChange={(e) => setNewOverlayDuration(Number(e.target.value))}
+                        className="w-16 border border-purple-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-purple-400"
+                      />
+                      <span className="text-xs text-gray-500">seconds</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveOverlay}
+                        disabled={!newOverlayText.trim() && !newOverlayImageDataUrl}
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                        <Check className="w-3.5 h-3.5 mr-1" /> Save
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAddingOverlay(false)} className="text-gray-500 text-xs">Cancel</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {overlays.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-semibold text-purple-600 flex items-center gap-1"><Layers className="w-3 h-3" /> Overlays ({overlays.length})</p>
+                  {overlays.map((ov) => (
+                    <div key={ov.id} className="flex items-center gap-2 px-2 py-1.5 bg-purple-50 rounded border border-purple-100 text-xs">
+                      <span className="font-mono text-purple-500 shrink-0">{formatTime(ov.startTime)}</span>
+                      <span className="text-gray-500 shrink-0">→ {ov.duration}s</span>
+                      {ov.imageDataUrl && <img src={ov.imageDataUrl} alt="" className="h-6 w-8 object-cover rounded shrink-0" />}
+                      {ov.text && <span className="text-gray-700 truncate max-w-[120px]">{ov.text}</span>}
+                      <button onClick={() => deleteOverlay(ov.id)} className="ml-auto text-gray-300 hover:text-red-400 shrink-0"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -700,7 +839,30 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         </div>
       )}
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden relative">
+        {(() => {
+          const activeOverlays = overlays.filter(
+            (o) => audioCurrentTime >= o.startTime && audioCurrentTime < o.startTime + o.duration
+          );
+          if (activeOverlays.length === 0) return null;
+          const ov = activeOverlays[activeOverlays.length - 1];
+          return (
+            <div className="absolute inset-0 z-50 flex items-center justify-center"
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
+              <div className="flex flex-col items-center gap-3 max-w-lg px-6 py-5 rounded-2xl bg-white/90 shadow-2xl text-center">
+                {ov.imageDataUrl && (
+                  <img src={ov.imageDataUrl} alt="" className="max-h-56 max-w-full rounded-lg object-contain shadow" />
+                )}
+                {ov.text && (
+                  <p className="text-2xl font-semibold text-gray-900 leading-snug"
+                    style={{ fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
+                    {ov.text}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
         <div className="flex flex-col items-center justify-center px-6 py-4"
           style={{ background: "#ffffff" }}>
           {groups.length > 1 && (
