@@ -537,73 +537,28 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               className="text-green-600 hover:text-green-800 disabled:opacity-40">
               <Download className="w-4 h-4 mr-1" /> Save Markers
             </Button>
-            {timingIndex >= localItems.length && (
-              <Button onClick={goToPlayback} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-                <CheckCircle className="w-4 h-4 mr-1" /> Done — Preview
-              </Button>
-            )}
+            <Button onClick={goToPlayback} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+              <CheckCircle className="w-4 h-4 mr-1" /> Done — Preview
+            </Button>
           </div>
         </div>
 
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Live preview panel — always visible */}
-          <div className="border-b border-amber-100 bg-white" style={{ minHeight: "180px" }}>
-            <div className="flex flex-col items-center justify-center px-6 pt-3 pb-1">
-              {groups.length > 1 && (
-                <p className="text-xs text-amber-500 mb-1 font-medium">
-                  Group {timingGroup + 1} of {groups.length}
+          <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
+            style={{ background: "linear-gradient(160deg, #fef9f0 0%, #fdf3e7 100%)" }}>
+            {groups.length > 1 && (
+              <p className="text-xs text-amber-500 mb-1 font-medium">
+                Group {timingGroup + 1} of {groups.length}
+              </p>
+            )}
+            <div className="flex flex-col items-center gap-y-1">
+              {timingGroupLines.map((line, i) => (
+                <p key={i} className="font-serif leading-relaxed text-center"
+                  style={{ color: "#000000", fontSize: "clamp(13px, 1.8vw, 20px)", fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
+                  {line}
                 </p>
-              )}
-              <div className="flex flex-col items-center gap-y-0.5">
-                {timingGroupLines.map((line, i) => (
-                  <p key={i} className="font-serif leading-relaxed text-center"
-                    style={{ color: "#000000", fontSize: `${Math.round(slokaFontSize * 0.6)}px`, fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
-                    {line}
-                  </p>
-                ))}
-              </div>
+              ))}
             </div>
-            <div className="w-full relative" style={{ height: "2px" }}>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to right, transparent 0%, rgba(255,215,0,0.15) 5%, rgba(255,215,0,1) 35%, rgba(255,255,180,1) 50%, rgba(255,215,0,1) 65%, rgba(255,215,0,0.15) 95%, transparent 100%)", boxShadow: "0 0 8px 3px rgba(255,215,0,0.5)" }} />
-            </div>
-            {(() => {
-              const previewGroupWords = groups[timingGroup]?.words ?? [];
-              const previewGroupStart = groupStartIndices[timingGroup] ?? 0;
-              const ROWS = 3;
-              const numCols = Math.ceil(previewGroupWords.length / ROWS);
-              const previewFontSize = Math.round(previousFontSize * 0.55);
-              return (
-                <div className="flex items-start overflow-x-auto overflow-y-hidden px-6 pt-3 pb-3 gap-6"
-                  style={{ minHeight: "80px" }}>
-                  {Array.from({ length: numCols }, (_, colIdx) => (
-                    <div key={colIdx} className="flex flex-col gap-4 shrink-0">
-                      {previewGroupWords.slice(colIdx * ROWS, (colIdx + 1) * ROWS).map((_, rowIdx) => {
-                        const globalIdx = previewGroupStart + colIdx * ROWS + rowIdx;
-                        const item = localItems[globalIdx];
-                        const isActive = globalIdx === currentIndex;
-                        const isPast = globalIdx < currentIndex;
-                        return (
-                          <div key={globalIdx} className="flex items-center select-none"
-                            style={{
-                              fontSize: `${previewFontSize}px`,
-                              color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
-                              fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
-                              transform: isActive ? "scale(1.25)" : "scale(1)",
-                              transformOrigin: "left center",
-                              transition: "transform 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
-                              fontWeight: isActive ? "700" : "400",
-                              whiteSpace: "nowrap",
-                            }}>
-                            <span style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "0.8em", fontSize: `${previewFontSize * 0.7}px`, marginRight: "3px", transition: "opacity 250ms" }}>▶</span>
-                            {item}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
