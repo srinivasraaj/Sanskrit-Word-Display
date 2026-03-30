@@ -291,7 +291,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (ts.length > 0) {
       const ahead = t + playbackOffsetRef.current;
       for (let i = ts.length - 1; i >= 0; i--) {
-        if (ahead >= ts[i]) { active = i; break; }
+        if (ts[i] != null && ahead >= ts[i]) { active = i; break; }
       }
     }
     if (active !== lastActiveRef.current) {
@@ -456,7 +456,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const ahead = t + playbackOffsetRef.current;
     let active = -1;
     for (let i = ts.length - 1; i >= 0; i--) {
-      if (ahead >= ts[i]) { active = i; break; }
+      if (ts[i] != null && ahead >= ts[i]) { active = i; break; }
     }
     lastActiveRef.current = active;
     setCurrentIndex(active);
@@ -711,10 +711,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         const json = JSON.parse(ev.target?.result as string);
         if (!Array.isArray(json.timestamps)) throw new Error("Invalid format");
         const loaded: number[] = json.timestamps;
+        const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
+        const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
         timestampsRef.current = loaded;
-        timingIndexRef.current = loaded.length;
+        timingIndexRef.current = timingIdx;
         setTimestamps(loaded);
-        setTimingIndex(loaded.length);
+        setTimingIndex(timingIdx);
         if (json.words && Array.isArray(json.words)) {
           setLocalItems(json.words);
           localItemsLenRef.current = json.words.length;
