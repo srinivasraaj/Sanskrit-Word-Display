@@ -1546,16 +1546,25 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   <img src={ov.imageDataUrl} alt="" className="max-h-48 max-w-full rounded-lg object-contain mb-4" />
                 )}
                 {ov.text && (
-                  <p className="text-center font-semibold leading-tight w-full"
-                    style={{
-                      fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
-                      fontSize: "clamp(28px, 5vw, 64px)",
-                      color: "#1a1a1a",
-                      padding: "0 2%",
-                      wordBreak: "break-word",
-                    }}>
-                    {ov.text}
-                  </p>
+                  <div style={{
+                    display: "inline-block",
+                    border: "2.5px solid #c8a84b",
+                    borderRadius: "1rem",
+                    padding: "clamp(10px, 1.5vw, 24px) clamp(16px, 2.5vw, 40px)",
+                    background: "rgba(255,255,255,0.92)",
+                    maxWidth: "90%",
+                  }}>
+                    <p className="text-center font-semibold leading-tight"
+                      style={{
+                        fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
+                        fontSize: "clamp(28px, 5vw, 64px)",
+                        color: "#1a1a1a",
+                        wordBreak: "break-word",
+                        margin: 0,
+                      }}>
+                      {ov.text}
+                    </p>
+                  </div>
                 )}
               </div>
             );
@@ -1596,7 +1605,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               </div>
 
               <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
-                style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
+                style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
                 {(() => {
                   const ROWS_PER_COL = 3;
                   const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
