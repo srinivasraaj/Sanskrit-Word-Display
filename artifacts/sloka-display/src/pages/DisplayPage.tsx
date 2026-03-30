@@ -649,24 +649,26 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const numTrans = Math.max(0, numGroupsRef.current - 1);
     if (numTrans <= 0) return;
     const t = audio.currentTime;
-    const existing = [...(groupTransitionTimesRef.current ?? [])];
-    const filtered = existing.filter(x => x != null && x !== undefined) as number[];
-    filtered.push(t);
-    filtered.sort((a, b) => a - b);
-    groupTransitionTimesRef.current = filtered as number[];
-    setGroupTransitionTimes([...filtered] as number[]);
+    setGroupTransitionTimes(prev => {
+      const filtered = (prev as (number | undefined | null)[])
+        .filter(x => x != null && x !== undefined) as number[];
+      filtered.push(t);
+      filtered.sort((a, b) => a - b);
+      groupTransitionTimesRef.current = filtered;
+      return [...filtered];
+    });
   };
 
   const removeGroupTransition = (timeValue: number) => {
-    const existing = [...(groupTransitionTimesRef.current ?? [])].filter(
-      x => x != null && x !== undefined,
-    ) as number[];
-    const idx = existing.indexOf(timeValue);
-    if (idx >= 0) {
+    setGroupTransitionTimes(prev => {
+      const existing = (prev as (number | undefined | null)[])
+        .filter(x => x != null && x !== undefined) as number[];
+      const idx = existing.indexOf(timeValue);
+      if (idx < 0) return prev;
       existing.splice(idx, 1);
-      groupTransitionTimesRef.current = existing as number[];
-      setGroupTransitionTimes([...existing] as number[]);
-    }
+      groupTransitionTimesRef.current = existing;
+      return [...existing];
+    });
   };
 
   const removeTimestamp = (cycleIdx: number, wordIdx: number) => {
@@ -1193,8 +1195,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             {isUnmarked && (
                               <span className="text-[9px] text-amber-500 whitespace-nowrap font-medium">⚠ not marked</span>
                             )}
-                            {transChips.map((t, i) => (
-                              <span key={i}
+                            {transChips.map((t) => (
+                              <span key={String(t)}
                                 className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
                                 style={{
                                   background: "#f0fdf4",
