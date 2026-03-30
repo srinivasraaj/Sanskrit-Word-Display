@@ -667,6 +667,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       words: localItems,
       timestamps,
       overlays,
+      audioDuration: audioRef.current?.duration ?? null,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -698,14 +699,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           setOverlays(json.overlays);
         }
         const audioDur = audioRef.current?.duration ?? 0;
-        if (audioDur > 0 && loaded.length > 0) {
+        const savedDur: number | null = json.audioDuration ?? null;
+        if (loaded.length > 0) {
           const maxTs = Math.max(...loaded);
-          if (maxTs > audioDur) {
+          if (audioDur > 0 && maxTs > audioDur) {
             alert(
               `Warning: This markers file has timestamps up to ${(maxTs / 60).toFixed(1)} min, ` +
               `but the loaded audio is only ${(audioDur / 60).toFixed(1)} min long.\n\n` +
               `These markers were saved with a different audio file. ` +
               `The ${loaded.filter((t) => t > audioDur).length} affected word(s) will not highlight during playback — please re-mark them.`
+            );
+          } else if (audioDur === 0 && savedDur !== null) {
+            alert(
+              `Note: This markers file was saved with a ${(savedDur / 60).toFixed(1)} min audio file. ` +
+              `Make sure you load the same audio before playback, otherwise timestamps may not match.`
             );
           }
         }
