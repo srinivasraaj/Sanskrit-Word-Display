@@ -474,27 +474,22 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
 
   const markGroupStart = (groupIdx: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
     const startIdx = groupStartIndices[groupIdx];
     const groupEndIdx = groupIdx + 1 < groupStartIndices.length
       ? groupStartIndices[groupIdx + 1]
       : localItemsLenRef.current;
-    const t = Math.max(0, audio.currentTime - 1);
     const existing = [...timestampsRef.current];
-    // Extend array if needed so indices beyond group end are accessible
+    // Extend array if needed so positions beyond group end are accessible
     while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
-    // Set first word of this group to current time
-    existing[startIdx] = t;
-    // Clear only the remaining words within this group so user re-marks them
-    for (let i = startIdx + 1; i < groupEndIdx; i++) {
+    // Clear all words within this group so user re-marks them with Enter
+    for (let i = startIdx; i < groupEndIdx; i++) {
       existing[i] = undefined as unknown as number;
     }
     timestampsRef.current = existing;
-    timingIndexRef.current = startIdx + 1;
+    timingIndexRef.current = startIdx;
     audioEndedInTimingRef.current = false;
     setTimestamps([...existing]);
-    setTimingIndex(startIdx + 1);
+    setTimingIndex(startIdx);
     setRetimeMenuGroup(null);
   };
 
