@@ -1550,7 +1550,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     display: "inline-block",
                     border: "2.5px solid #c8a84b",
                     borderRadius: "1rem",
-                    padding: "clamp(10px, 1.5vw, 24px) clamp(16px, 2.5vw, 40px)",
+                    padding: "clamp(12px, 1.8vw, 29px) clamp(16px, 2.5vw, 40px)",
                     background: "rgba(255,255,255,0.92)",
                     maxWidth: "90%",
                   }}>
