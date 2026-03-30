@@ -495,6 +495,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
     const startIdx = groupStartIndices[groupIdx];
+    const groupEndIdx = groupIdx + 1 < groupStartIndices.length
+      ? groupStartIndices[groupIdx + 1]
+      : localItemsLenRef.current;
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -503,10 +506,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     audioEndedInTimingRef.current = false;
-    const trimmed = timestampsRef.current.slice(0, startIdx);
-    timestampsRef.current = trimmed;
+    // Preserve timestamps outside this group; clear only within it
+    const existing = [...timestampsRef.current];
+    while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
+    for (let i = startIdx; i < groupEndIdx; i++) {
+      existing[i] = undefined as unknown as number;
+    }
+    timestampsRef.current = existing;
     timingIndexRef.current = startIdx;
-    setTimestamps([...trimmed]);
+    setTimestamps([...existing]);
     setTimingIndex(startIdx);
     if (resetAudio) setAudioCurrentTime(0);
     setCurrentIndex(-1);
@@ -756,6 +764,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   if (phase === "timing") {
     const timingGroup = getTimingDisplayGroup(timingIndex);
     const timingGroupLines = groups[timingGroup]?.lines ?? [];
+    const currentGroupEndIdx = timingGroup + 1 < groups.length
+      ? groupStartIndices[timingGroup + 1]
+      : localItems.length;
+    const isRemarkMode = timingIndex < localItems.length &&
+      timestamps.some((t, i) => i >= currentGroupEndIdx && t != null);
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
@@ -780,6 +793,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             </Button>
           </div>
         </div>
+
+        {isRemarkMode && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 border-b border-blue-200 text-blue-700 text-xs font-medium">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            Re-marking group {timingGroup + 1} — timings for all other groups are preserved
+          </div>
+        )}
 
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col items-center justify-center border-b border-amber-100 px-6 py-4"
