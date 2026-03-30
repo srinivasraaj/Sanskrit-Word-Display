@@ -18,6 +18,118 @@ interface DisplayPageProps {
 
 type Phase = "timing" | "playback";
 
+function drawCanvasFrame(
+  canvas: HTMLCanvasElement | null,
+  activeIdx: number,
+  ds: {
+    groupLines: string[]; groupWords: string[]; groupStart: number;
+    slokaFontSize: number; previousFontSize: number; highlightColor: string;
+    slokaBold: boolean; slokaItalic: boolean;
+    overlays: OverlayMarker[]; localItems: string[];
+  },
+  currentTime: number
+) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  const activeOv = ds.overlays.filter(
+    (o) => currentTime >= o.startTime && currentTime < o.startTime + o.duration
+  ).pop();
+
+  if (activeOv) {
+    const fontSize = Math.max(28, Math.min(64, W * 0.045));
+    ctx.font = `bold ${fontSize}px 'Mandali','Noto Sans Telugu',Georgia,serif`;
+    ctx.fillStyle = "#1a1a1a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const words = activeOv.text.split(" ");
+    const lines: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(test).width > W * 0.94 && cur) { lines.push(cur); cur = w; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    const lh = fontSize * 1.35;
+    const startY = H / 2 - ((lines.length - 1) * lh) / 2;
+    lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lh));
+    return;
+  }
+
+  const SF = Math.max(16, Math.min(ds.slokaFontSize, 42));
+  const fontStyle = ds.slokaItalic ? "italic " : "";
+  const fontWeight = ds.slokaBold ? "bold " : "";
+  ctx.font = `${fontStyle}${fontWeight}${SF}px 'Mandali','Noto Sans Telugu',Georgia,serif`;
+  ctx.fillStyle = "#000000";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const slokaLineH = SF * 1.5;
+  let slokaBottom = 36;
+  ds.groupLines.forEach((line, i) => {
+    ctx.fillText(line, W / 2, slokaBottom + i * slokaLineH);
+  });
+  slokaBottom += ds.groupLines.length * slokaLineH + 16;
+
+  const divY = slokaBottom;
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, "rgba(255,215,0,0)");
+  grad.addColorStop(0.05, "rgba(255,215,0,0.15)");
+  grad.addColorStop(0.35, "rgba(255,215,0,1)");
+  grad.addColorStop(0.5, "rgba(255,255,180,1)");
+  grad.addColorStop(0.65, "rgba(255,215,0,1)");
+  grad.addColorStop(0.95, "rgba(255,215,0,0.15)");
+  grad.addColorStop(1, "rgba(255,215,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, divY, W, 3);
+
+  const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
+  const ROWS = 3;
+  const startX = W * 0.1;
+  const rowGap = Math.max(WF * 2.4, 56);
+  const wordsY = divY + 48;
+
+  ctx.font = `bold ${WF * 1.3}px 'Mandali','Noto Sans Telugu',Georgia,serif`;
+  let maxW = 60;
+  ds.groupWords.forEach((_, i) => {
+    const item = ds.localItems[ds.groupStart + i];
+    if (item) maxW = Math.max(maxW, ctx.measureText(item).width);
+  });
+  const colGap = maxW + 64;
+
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  ds.groupWords.forEach((_, i) => {
+    const globalIdx = ds.groupStart + i;
+    const item = ds.localItems[globalIdx];
+    if (!item) return;
+    const isActive = globalIdx === activeIdx;
+    const isPast = globalIdx < activeIdx;
+    if (!isActive && !isPast) return;
+    const col = Math.floor(i / ROWS);
+    const row = i % ROWS;
+    const x = startX + col * colGap;
+    const y = wordsY + row * rowGap;
+    if (isActive) {
+      ctx.font = `bold ${WF * 1.3}px 'Mandali','Noto Sans Telugu',Georgia,serif`;
+      ctx.fillStyle = ds.highlightColor;
+      const arrowW = ctx.measureText("▶ ").width;
+      ctx.fillText("▶ ", x, y);
+      ctx.fillText(item, x + arrowW, y);
+    } else {
+      ctx.font = `${WF}px 'Mandali','Noto Sans Telugu',Georgia,serif`;
+      ctx.fillStyle = "#000000";
+      ctx.fillText(item, x, y);
+    }
+  });
+}
+
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const { groups: rawGroups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
   const groups = rawGroups ?? [];
@@ -63,6 +175,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const lastAudioTimeUpdateRef = useRef(0);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isRecordingRef = useRef(false);
+  const displayStateRef = useRef({
+    groupLines: [] as string[],
+    groupWords: [] as string[],
+    groupStart: 0,
+    slokaFontSize: 32,
+    previousFontSize: 28,
+    highlightColor: "#f59e0b",
+    slokaBold: false,
+    slokaItalic: false,
+    overlays: [] as OverlayMarker[],
+    localItems: [] as string[],
+  });
 
   const [overlays, setOverlays] = useState<OverlayMarker[]>([]);
   const [addingOverlay, setAddingOverlay] = useState(false);
@@ -82,6 +208,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  useEffect(() => {
+    displayStateRef.current = {
+      groupLines: groups[displayGroup]?.lines ?? [],
+      groupWords: groups[displayGroup]?.words ?? [],
+      groupStart: groupStartIndices[displayGroup] ?? 0,
+      slokaFontSize,
+      previousFontSize,
+      highlightColor,
+      slokaBold,
+      slokaItalic,
+      overlays,
+      localItems,
+    };
+  });
 
   useEffect(() => {
     if (!isRecording) return;
@@ -154,6 +295,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (active !== lastActiveRef.current) {
       lastActiveRef.current = active;
       setCurrentIndex(active);
+    }
+    if (isRecordingRef.current) {
+      drawCanvasFrame(canvasRef.current, lastActiveRef.current, displayStateRef.current, audioRef.current?.currentTime ?? 0);
     }
     rafRef.current = requestAnimationFrame(tick);
   }, []);
@@ -346,47 +490,37 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const startRecording = async () => {
     try {
-      const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
-        video: true,
-        audio: false,
-        preferCurrentTab: true,
-        selfBrowserSurface: "include",
-      });
+      const canvas = canvasRef.current;
+      if (!canvas) { alert("Canvas not ready. Please try again."); return; }
+
+      const videoStream = canvas.captureStream(30);
       const audioEl = audioRef.current as any;
       const audioStream: MediaStream | null =
         typeof audioEl?.captureStream === "function" ? audioEl.captureStream() : null;
+
       const combinedTracks = [
-        ...screenStream.getVideoTracks(),
+        ...videoStream.getVideoTracks(),
         ...(audioStream ? audioStream.getAudioTracks() : []),
       ];
       const combinedStream = new MediaStream(combinedTracks);
       chunksRef.current = [];
+
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
         ? "video/webm;codecs=vp9,opus"
         : MediaRecorder.isTypeSupported("video/webm")
         ? "video/webm"
         : "video/mp4";
+
       const recorder = new MediaRecorder(combinedStream, { mimeType });
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         setRecordedBlob(blob);
-        screenStream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       };
 
-      const videoTrack = screenStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.addEventListener("ended", () => {
-          stopAndSaveRecording();
-        });
-      }
-
       const audio = audioRef.current;
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
+      if (audio) { audio.pause(); audio.currentTime = 0; }
       lastActiveRef.current = -1;
       setCurrentIndex(-1);
       setDisplayGroup(0);
@@ -395,15 +529,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
       mediaRecorderRef.current = recorder;
       recorder.start(100);
+      isRecordingRef.current = true;
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimerRef.current = window.setInterval(() => setRecordingTime((t) => t + 1), 1000);
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
+
+      drawCanvasFrame(canvas, -1, displayStateRef.current, 0);
       setTimeout(() => startPlayback(), 500);
-    } catch {
-      alert("Allow screen sharing to record. Then recording will auto-start playback.");
+    } catch (err) {
+      alert("Recording failed: " + err);
     }
   };
 
@@ -1000,6 +1134,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           <p className="text-gray-400 text-xs">{localItems.length} words · {timestamps.length} timestamps recorded</p>
         </div>
       )}
+
+      <canvas ref={canvasRef} width={1280} height={720} style={{ display: "none" }} />
     </div>
   );
 }
