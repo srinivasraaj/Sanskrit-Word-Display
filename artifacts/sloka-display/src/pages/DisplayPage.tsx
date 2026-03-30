@@ -899,90 +899,97 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           const activeOverlays = overlays.filter(
             (o) => audioCurrentTime >= o.startTime && audioCurrentTime < o.startTime + o.duration
           );
-          if (activeOverlays.length === 0) return null;
-          const ov = activeOverlays[activeOverlays.length - 1];
+          const ov = activeOverlays[activeOverlays.length - 1] ?? null;
+
+          if (ov) {
+            return (
+              <div className="flex flex-col flex-1 items-center justify-center bg-white w-full px-4">
+                {ov.imageDataUrl && (
+                  <img src={ov.imageDataUrl} alt="" className="max-h-48 max-w-full rounded-lg object-contain mb-4" />
+                )}
+                {ov.text && (
+                  <p className="text-center font-semibold leading-tight w-full"
+                    style={{
+                      fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
+                      fontSize: "clamp(28px, 5vw, 64px)",
+                      color: "#1a1a1a",
+                      padding: "0 2%",
+                      wordBreak: "break-word",
+                    }}>
+                    {ov.text}
+                  </p>
+                )}
+              </div>
+            );
+          }
+
           return (
-            <div className="w-full flex flex-col items-center justify-center px-4 py-5 bg-white">
-              {ov.imageDataUrl && (
-                <img src={ov.imageDataUrl} alt="" className="max-h-48 max-w-full rounded-lg object-contain mb-3" />
-              )}
-              {ov.text && (
-                <p className="text-center font-semibold leading-tight w-full"
-                  style={{
-                    fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
-                    fontSize: "clamp(24px, 5vw, 56px)",
-                    color: "#1a1a1a",
-                    padding: "0 2%",
-                    wordBreak: "break-word",
-                  }}>
-                  {ov.text}
-                </p>
-              )}
-            </div>
-          );
-        })()}
-        <div className="flex flex-col items-center justify-center px-6 py-4"
-          style={{ background: "#ffffff" }}>
-          {groups.length > 1 && (
-            <p className="text-xs text-amber-400 mb-1">
-              {displayGroup + 1} / {groups.length}
-            </p>
-          )}
-          <div className="flex flex-col items-center gap-y-1">
-            {displayGroupLines.map((line, i) => (
-              <p key={i} className="font-serif leading-relaxed text-center"
-                style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
-                {line}
-              </p>
-            ))}
-          </div>
-        </div>
+            <>
+              <div className="flex flex-col items-center justify-center px-6 py-4"
+                style={{ background: "#ffffff" }}>
+                {groups.length > 1 && (
+                  <p className="text-xs text-amber-400 mb-1">
+                    {displayGroup + 1} / {groups.length}
+                  </p>
+                )}
+                <div className="flex flex-col items-center gap-y-1">
+                  {displayGroupLines.map((line, i) => (
+                    <p key={i} className="font-serif leading-relaxed text-center"
+                      style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              </div>
 
-        <div className="w-full relative" style={{ height: "3px" }}>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, transparent 0%, rgba(255,215,0,0.15) 5%, rgba(255,215,0,1) 35%, rgba(255,255,180,1) 50%, rgba(255,215,0,1) 65%, rgba(255,215,0,0.15) 95%, transparent 100%)", boxShadow: "0 0 12px 4px rgba(255,215,0,0.6), 0 0 24px 8px rgba(255,200,0,0.3), 0 0 2px 1px rgba(255,255,200,0.9)" }} />
-        </div>
+              <div className="w-full relative" style={{ height: "3px" }}>
+                <div className="absolute inset-0" style={{ background: "linear-gradient(to right, transparent 0%, rgba(255,215,0,0.15) 5%, rgba(255,215,0,1) 35%, rgba(255,255,180,1) 50%, rgba(255,215,0,1) 65%, rgba(255,215,0,0.15) 95%, transparent 100%)", boxShadow: "0 0 12px 4px rgba(255,215,0,0.6), 0 0 24px 8px rgba(255,200,0,0.3), 0 0 2px 1px rgba(255,255,200,0.9)" }} />
+              </div>
 
-        <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
-          style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
-          {(() => {
-            const ROWS_PER_COL = 3;
-            const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
-            return Array.from({ length: numCols }, (_, colIdx) => {
-              const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
-              return (
-                <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-24 shrink-0">
-                  {colItems.map((_, rowIdx) => {
-                    const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
-                    const item = localItems[globalIdx];
-                    const isActive = globalIdx === currentIndex;
-                    const isPast = globalIdx < currentIndex;
+              <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
+                style={{ background: "#ffffff", paddingLeft: "10%", paddingRight: "16px" }}>
+                {(() => {
+                  const ROWS_PER_COL = 3;
+                  const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
+                  return Array.from({ length: numCols }, (_, colIdx) => {
+                    const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
-                      <div key={globalIdx} className="flex items-center select-none"
-                        style={{
-                          fontSize: `${previousFontSize}px`,
-                          color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
-                          fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
-                          lineHeight: 1.3,
-                          transform: isActive ? "scale(1.3)" : "scale(1)",
-                          transformOrigin: "left center",
-                          transition: "transform 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
-                          textShadow: "none",
-                          fontWeight: isActive ? "700" : "400",
-                          whiteSpace: "nowrap",
-                          willChange: "transform, color",
-                          contain: "layout style",
-                        }}>
-                        <span className="inline-block mr-1 text-sm"
-                          style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)" }}>▶</span>
-                        {item}
+                      <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-24 shrink-0">
+                        {colItems.map((_, rowIdx) => {
+                          const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
+                          const item = localItems[globalIdx];
+                          const isActive = globalIdx === currentIndex;
+                          const isPast = globalIdx < currentIndex;
+                          return (
+                            <div key={globalIdx} className="flex items-center select-none"
+                              style={{
+                                fontSize: `${previousFontSize}px`,
+                                color: isActive ? highlightColor : isPast ? "#000000" : "transparent",
+                                fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
+                                lineHeight: 1.3,
+                                transform: isActive ? "scale(1.3)" : "scale(1)",
+                                transformOrigin: "left center",
+                                transition: "transform 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
+                                textShadow: "none",
+                                fontWeight: isActive ? "700" : "400",
+                                whiteSpace: "nowrap",
+                                willChange: "transform, color",
+                                contain: "layout style",
+                              }}>
+                              <span className="inline-block mr-1 text-sm"
+                                style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)" }}>▶</span>
+                              {item}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
-                  })}
-                </div>
-              );
-            });
-          })()}
-        </div>
+                  });
+                })()}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {!isRecording && (
