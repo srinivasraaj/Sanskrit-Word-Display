@@ -282,10 +282,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
   };
 
-  const retimeFromGroup = (groupIdx: number) => {
+  const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
+
+  const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
     const startIdx = groupStartIndices[groupIdx];
     const audio = audioRef.current;
-    if (audio) { audio.pause(); audio.currentTime = 0; }
+    if (audio) {
+      audio.pause();
+      if (resetAudio) audio.currentTime = 0;
+    }
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     const trimmed = timestampsRef.current.slice(0, startIdx);
@@ -293,8 +298,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     timingIndexRef.current = startIdx;
     setTimestamps([...trimmed]);
     setTimingIndex(startIdx);
-    setAudioCurrentTime(0);
+    if (resetAudio) setAudioCurrentTime(0);
     setCurrentIndex(-1);
+    setRetimeMenuGroup(null);
   };
 
   const restartTiming = () => {
@@ -710,13 +716,33 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
                         </span>
                         {groupFullyTimed && !isCurrentGroup && (
-                          <button
-                            onClick={() => retimeFromGroup(groupIdx)}
-                            title="Re-time this group and everything after it"
-                            className="text-xs text-gray-400 hover:text-amber-600 flex items-center gap-1 transition-colors"
-                          >
-                            <RotateCcw className="w-3 h-3" /> Re-time from here
-                          </button>
+                          retimeMenuGroup === groupIdx ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400 mr-1">Re-time:</span>
+                              <button
+                                onClick={() => retimeFromGroup(groupIdx, true)}
+                                className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-0.5 rounded transition-colors"
+                              >
+                                Reset audio
+                              </button>
+                              <button
+                                onClick={() => retimeFromGroup(groupIdx, false)}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-0.5 rounded transition-colors"
+                              >
+                                Keep position
+                              </button>
+                              <button onClick={() => setRetimeMenuGroup(null)} className="text-gray-300 hover:text-gray-500 ml-1">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setRetimeMenuGroup(groupIdx)}
+                              className="text-xs text-gray-400 hover:text-amber-600 flex items-center gap-1 transition-colors"
+                            >
+                              <RotateCcw className="w-3 h-3" /> Re-time from here
+                            </button>
+                          )
                         )}
                       </div>
                       <div className="space-y-1">
