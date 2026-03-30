@@ -715,7 +715,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         <span className="text-xs font-semibold">
                           Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
                         </span>
-                        {groupFullyTimed && !isCurrentGroup && (
+                        {groupFullyTimed && (
                           retimeMenuGroup === groupIdx ? (
                             <div className="flex items-center gap-1">
                               <span className="text-xs text-gray-400 mr-1">Re-time:</span>
