@@ -25,7 +25,7 @@ function drawCanvasFrame(
     groupLines: string[]; groupWords: string[]; groupStart: number;
     slokaFontSize: number; previousFontSize: number; highlightColor: string;
     slokaColor: string; overlayTextColor: string; pastWordColor: string;
-    slokaBold: boolean; slokaItalic: boolean;
+    slokaBold: boolean; slokaItalic: boolean; highlightCleared: boolean;
     overlays: OverlayMarker[]; localItems: string[];
   },
   currentTime: number
@@ -142,7 +142,7 @@ function drawCanvasFrame(
     const item = ds.localItems[globalIdx];
     if (!item) return;
     const numWordsInCanvas = ds.localItems.length;
-    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : activeIdx;
+    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 && !ds.highlightCleared ? activeIdx % numWordsInCanvas : -1;
     const isActive = globalIdx === activeWordIdx;
     const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
     if (!isActive && !isPast) return;
@@ -181,6 +181,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [timestamps, setTimestamps] = useState<number[]>([]);
   const [timingIndex, setTimingIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [highlightCleared, setHighlightCleared] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -230,6 +231,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     pastWordColor: "#000000",
     slokaBold: false,
     slokaItalic: false,
+    highlightCleared: false,
     overlays: [] as OverlayMarker[],
     localItems: [] as string[],
   });
@@ -269,6 +271,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       pastWordColor,
       slokaBold,
       slokaItalic,
+      highlightCleared,
       overlays,
       localItems,
     };
@@ -344,6 +347,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
     if (active !== lastActiveRef.current) {
       lastActiveRef.current = active;
+      setHighlightCleared(false);
       setCurrentIndex(active);
       // Clear any pending last-word highlight timer on every index change.
       if (lastWordClearTimerRef.current) {
@@ -356,11 +360,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       if (isLastWord) {
         lastWordClearTimerRef.current = setTimeout(() => {
           lastWordClearTimerRef.current = null;
-          // Do NOT reset lastActiveRef here — if we do, the tick loop immediately
-          // re-computes active = lastValidIdx, sees it differs from -1, and
-          // restores the highlight on the very next frame. Keeping lastActiveRef
-          // at lastValidIdx prevents the tick from re-applying the highlight.
-          setCurrentIndex(-1);
+          // Use a dedicated state flag instead of setCurrentIndex(-1).
+          // setCurrentIndex(-1) can be overridden by the tick loop on the very next
+          // frame (it sees active=lastValidIdx != lastActiveRef=-1 and re-applies).
+          // highlightCleared is only reset when a genuinely NEW word becomes active,
+          // so it is immune to the tick re-applying the same last-word index.
+          setHighlightCleared(true);
         }, 5000);
       }
     }
@@ -546,6 +551,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
     lastActiveRef.current = -1;
+    setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
     setDisplayGroup(0);
@@ -559,6 +565,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
+    setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
     setDisplayGroup(0);
@@ -681,6 +688,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimestamps([...existing]);
     setTimingIndex(startIdx);
     if (resetAudio) setAudioCurrentTime(0);
+    setHighlightCleared(false);
     setCurrentIndex(-1);
     setRetimeMenuGroup(null);
   };
@@ -767,6 +775,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimestamps([]);
     setTimingIndex(0);
     setAudioCurrentTime(0);
+    setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
     setPhase("timing");
@@ -778,6 +787,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     audio.currentTime = 0;
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
+    setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
     const playPromise = audio.play();
@@ -840,6 +850,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       if (audio) { audio.pause(); audio.currentTime = 0; }
       lastActiveRef.current = -1;
       lastDisplayGroupRef.current = 0;
+      setHighlightCleared(false);
       setCurrentIndex(-1);
       setDisplayGroup(0);
       setAudioCurrentTime(0);
@@ -1642,7 +1653,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
-                          const activeWordIdx = currentIndex >= 0 && localItems.length > 0 ? currentIndex % localItems.length : -1;
+                          const activeWordIdx = currentIndex >= 0 && !highlightCleared && localItems.length > 0 ? currentIndex % localItems.length : -1;
                           const isActive = globalIdx === activeWordIdx;
                           const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
                           return (
