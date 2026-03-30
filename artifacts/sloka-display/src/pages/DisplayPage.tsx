@@ -212,6 +212,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const lastActiveRef = useRef(-1);
   const lastAudioTimeUpdateRef = useRef(0);
   const goToPlaybackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastWordClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -337,6 +338,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (active !== lastActiveRef.current) {
       lastActiveRef.current = active;
       setCurrentIndex(active);
+      // Clear any pending last-word highlight timer on every index change.
+      if (lastWordClearTimerRef.current) {
+        clearTimeout(lastWordClearTimerRef.current);
+        lastWordClearTimerRef.current = null;
+      }
+      // If this is the last valid timestamp, schedule clearing the highlight after 5s.
+      const validTs = ts.filter(x => x != null);
+      const isLastWord = active >= 0 && active === validTs.length - 1;
+      if (isLastWord) {
+        lastWordClearTimerRef.current = setTimeout(() => {
+          lastWordClearTimerRef.current = null;
+          lastActiveRef.current = -1;
+          setCurrentIndex(-1);
+        }, 5000);
+      }
     }
 
     // Compute display group every frame for smooth group transitions.
