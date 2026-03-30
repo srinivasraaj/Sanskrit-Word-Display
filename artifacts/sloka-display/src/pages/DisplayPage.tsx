@@ -468,6 +468,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
 
+  const jumpToGroup = (groupIdx: number) => {
+    const startIdx = groupStartIndices[groupIdx];
+    const trimmed = timestampsRef.current.slice(0, startIdx);
+    timestampsRef.current = trimmed;
+    timingIndexRef.current = startIdx;
+    audioEndedInTimingRef.current = false;
+    setTimestamps([...trimmed]);
+    setTimingIndex(startIdx);
+    setRetimeMenuGroup(null);
+  };
+
   const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
     const startIdx = groupStartIndices[groupIdx];
     const audio = audioRef.current;
@@ -894,9 +905,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   return (
                     <div key={groupIdx}>
                       <div className={`flex items-center justify-between mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
-                        <span className="text-xs font-semibold">
+                        <button
+                          onClick={() => jumpToGroup(groupIdx)}
+                          title="Click to jump timing cursor to this group"
+                          className={`text-xs font-semibold flex items-center gap-1 rounded px-1 py-0.5 transition-colors
+                            ${isCurrentGroup
+                              ? "text-amber-700 bg-amber-50 hover:bg-amber-100"
+                              : "text-gray-400 hover:text-amber-600 hover:bg-amber-50"}`}
+                        >
                           Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
-                        </span>
+                          <span className="opacity-50 text-[9px] leading-none">▶</span>
+                        </button>
                         {groupFullyTimed && (
                           retimeMenuGroup === groupIdx ? (
                             <div className="flex items-center gap-1">
