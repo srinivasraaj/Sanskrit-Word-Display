@@ -282,6 +282,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
   };
 
+  const retimeFromGroup = (groupIdx: number) => {
+    const startIdx = groupStartIndices[groupIdx];
+    const audio = audioRef.current;
+    if (audio) { audio.pause(); audio.currentTime = 0; }
+    setIsPlaying(false);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    const trimmed = timestampsRef.current.slice(0, startIdx);
+    timestampsRef.current = trimmed;
+    timingIndexRef.current = startIdx;
+    setTimestamps([...trimmed]);
+    setTimingIndex(startIdx);
+    setAudioCurrentTime(0);
+    setCurrentIndex(-1);
+  };
+
   const restartTiming = () => {
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
@@ -686,10 +701,23 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 {groups.map((group, groupIdx) => {
                   const groupStart = groupStartIndices[groupIdx];
                   const isCurrentGroup = groupIdx === getTimingDisplayGroup(timingIndex);
+                  const groupEnd = groupStart + group.words.length;
+                  const groupFullyTimed = timingIndex >= groupEnd;
                   return (
                     <div key={groupIdx}>
-                      <div className={`text-xs font-semibold mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
-                        Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
+                      <div className={`flex items-center justify-between mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
+                        <span className="text-xs font-semibold">
+                          Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, groups.flatMap(g => g.lines).length)}
+                        </span>
+                        {groupFullyTimed && !isCurrentGroup && (
+                          <button
+                            onClick={() => retimeFromGroup(groupIdx)}
+                            title="Re-time this group and everything after it"
+                            className="text-xs text-gray-400 hover:text-amber-600 flex items-center gap-1 transition-colors"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Re-time from here
+                          </button>
+                        )}
                       </div>
                       <div className="space-y-1">
                         {group.words.map((_, wordIdx) => {
