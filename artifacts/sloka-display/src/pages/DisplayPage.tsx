@@ -1017,6 +1017,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   return (
     <div className="bg-gray-50 flex flex-col"
       style={isRecording ? { position: "fixed", inset: 0, zIndex: 9999 } : { minHeight: "100vh" }}>
+      {isRecording && (
+        <div className="fixed top-3 right-3 z-[10000] flex items-center gap-2">
+          <span className="bg-black/60 text-white text-xs font-mono px-3 py-1.5 rounded-full flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            REC {Math.floor(recordingTime / 60).toString().padStart(2, "0")}:{(recordingTime % 60).toString().padStart(2, "0")}
+          </span>
+          <button
+            onClick={stopAndSaveRecording}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg transition-colors"
+          >
+            ■ Stop &amp; Save
+          </button>
+        </div>
+      )}
+
       {!isRecording && (
         <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
           <div className="flex items-center gap-2">
