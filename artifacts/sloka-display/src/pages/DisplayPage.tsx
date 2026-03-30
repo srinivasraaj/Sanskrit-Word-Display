@@ -45,7 +45,6 @@ function drawCanvasFrame(
   if (activeOv) {
     const fontSize = Math.max(28, Math.min(64, W * 0.045));
     ctx.font = `bold ${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-    ctx.fillStyle = "#1a1a1a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const words = activeOv.text.split(" ");
@@ -53,11 +52,38 @@ function drawCanvasFrame(
     let cur = "";
     for (const w of words) {
       const test = cur ? `${cur} ${w}` : w;
-      if (ctx.measureText(test).width > W * 0.94 && cur) { lines.push(cur); cur = w; }
+      if (ctx.measureText(test).width > W * 0.82 && cur) { lines.push(cur); cur = w; }
       else cur = test;
     }
     if (cur) lines.push(cur);
     const lh = fontSize * 1.35;
+    const maxLineW = lines.reduce((m, ln) => Math.max(m, ctx.measureText(ln).width), 0);
+    const padX = fontSize * 1.1;
+    const padY = fontSize * 0.7;
+    const boxW = maxLineW + padX * 2;
+    const boxH = lines.length * lh + padY * 2;
+    const boxX = W / 2 - boxW / 2;
+    const boxY = H / 2 - boxH / 2;
+    const r = fontSize * 0.55;
+    // Draw rounded rectangle border
+    ctx.beginPath();
+    ctx.moveTo(boxX + r, boxY);
+    ctx.lineTo(boxX + boxW - r, boxY);
+    ctx.arcTo(boxX + boxW, boxY, boxX + boxW, boxY + r, r);
+    ctx.lineTo(boxX + boxW, boxY + boxH - r);
+    ctx.arcTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH, r);
+    ctx.lineTo(boxX + r, boxY + boxH);
+    ctx.arcTo(boxX, boxY + boxH, boxX, boxY + boxH - r, r);
+    ctx.lineTo(boxX, boxY + r);
+    ctx.arcTo(boxX, boxY, boxX + r, boxY, r);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fill();
+    ctx.strokeStyle = "#c8a84b";
+    ctx.lineWidth = Math.max(2, W * 0.004);
+    ctx.stroke();
+    // Draw text inside the box
+    ctx.fillStyle = "#1a1a1a";
     const startY = H / 2 - ((lines.length - 1) * lh) / 2;
     lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lh));
     return;
