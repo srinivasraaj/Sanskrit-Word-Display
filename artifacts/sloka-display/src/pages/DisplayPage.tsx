@@ -161,8 +161,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [displayGroup, setDisplayGroup] = useState(0);
-  const [groupTransitionTimes, setGroupTransitionTimes] = useState<(number | undefined)[]>([]);
-  const groupTransitionTimesRef = useRef<(number | undefined)[]>([]);
+  const [groupTransitionTimes, setGroupTransitionTimes] = useState<Record<number, number[]>>({});
+  const groupTransitionTimesRef = useRef<Record<number, number[]>>({});
   const lastDisplayGroupRef = useRef(0);
   const groupStartIndicesRef = useRef<number[]>(groupStartIndices);
   const numGroupsRef = useRef(groups.length);
@@ -331,11 +331,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           repStart = wt as number;
       }
     }
-    // Flat list of all valid (non-null) absolute transition times.
-    const gtt = groupTransitionTimesRef.current ?? [];
-    const validGTT = Array.isArray(gtt)
-      ? (gtt as (number | undefined | null)[]).filter(x => x != null) as number[]
-      : [];
+    // Per-transition keyed map of absolute audio times.
+    const perTransTimes = groupTransitionTimesRef.current ?? {};
     // Word-boundary group (always computed as floor).
     let wbGroup = 0;
     if (active >= 0) {
@@ -345,14 +342,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (wi >= gsi[i]) { wbGroup = i; break; }
       }
     }
-    // Transition-triggered group: any valid time that fired after repStart.
+    // Transition-triggered group: each transIdx checked independently.
     let transGroup = 0;
-    if (numTrans > 0 && validGTT.length > 0 && repStart > -Infinity) {
-      for (let tr = numTrans - 1; tr >= 0; tr--) {
-        if (validGTT.some(t => t >= repStart && t <= ahead)) {
+    if (numTrans > 0 && repStart > -Infinity) {
+      for (let tr = 0; tr < numTrans; tr++) {
+        const times = (perTransTimes[tr] ?? []) as number[];
+        if (times.some(t => t >= repStart && t <= ahead)) {
           transGroup = Math.min(tr + 1, numGroups - 1);
         }
-        break; // flat list covers all transIdx for now
       }
     }
     let newGroup = Math.max(wbGroup, transGroup);
@@ -541,10 +538,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           repStart = wt as number;
       }
     }
-    const gtt = groupTransitionTimesRef.current ?? [];
-    const validGTT2 = Array.isArray(gtt)
-      ? (gtt as (number | undefined | null)[]).filter(x => x != null) as number[]
-      : [];
+    const perTransTimes2 = groupTransitionTimesRef.current ?? {};
     let wbGroup2 = 0;
     if (active >= 0) {
       const wi = nw > 0 ? active % nw : active;
@@ -553,12 +547,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       }
     }
     let transGroup2 = 0;
-    if (numTrans > 0 && validGTT2.length > 0 && repStart > -Infinity) {
-      for (let tr = numTrans - 1; tr >= 0; tr--) {
-        if (validGTT2.some(t => t >= repStart && t <= ahead)) {
+    if (numTrans > 0 && repStart > -Infinity) {
+      for (let tr = 0; tr < numTrans; tr++) {
+        const times2 = (perTransTimes2[tr] ?? []) as number[];
+        if (times2.some(t => t >= repStart && t <= ahead)) {
           transGroup2 = Math.min(tr + 1, groups.length - 1);
         }
-        break;
       }
     }
     const newGroup = Math.max(wbGroup2, transGroup2);
@@ -639,35 +633,36 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setRetimeMenuGroup(null);
   };
 
-  // groupTransitionTimes is now a flat sorted list of absolute audio times.
-  // No per-cycle indexing — a time fires whenever it falls within the current
-  // repetition's window [repStart, ahead], so one mark covers all future
-  // playbacks of the same repetition regardless of cycle index.
-  const markGroupTransition = (_transIdx: number) => {
+  // groupTransitionTimes is a per-transition-index map: Record<transIdx, number[]>.
+  // Each entry between sections (transIdx 0 = between section 1 and 2, etc.) has
+  // its own independent list of absolute audio times.
+  const markGroupTransition = (transIdx: number) => {
     const audio = audioRef.current;
     if (!audio) return;
     const numTrans = Math.max(0, numGroupsRef.current - 1);
-    if (numTrans <= 0) return;
+    if (numTrans <= 0 || transIdx < 0 || transIdx >= numTrans) return;
     const t = audio.currentTime;
     setGroupTransitionTimes(prev => {
-      const filtered = (prev as (number | undefined | null)[])
-        .filter(x => x != null && x !== undefined) as number[];
-      filtered.push(t);
-      filtered.sort((a, b) => a - b);
-      groupTransitionTimesRef.current = filtered;
-      return [...filtered];
+      const updated = { ...prev };
+      const existing = [...(updated[transIdx] ?? [])];
+      existing.push(t);
+      existing.sort((a, b) => a - b);
+      updated[transIdx] = existing;
+      groupTransitionTimesRef.current = updated;
+      return updated;
     });
   };
 
-  const removeGroupTransition = (timeValue: number) => {
+  const removeGroupTransition = (transIdx: number, timeValue: number) => {
     setGroupTransitionTimes(prev => {
-      const existing = (prev as (number | undefined | null)[])
-        .filter(x => x != null && x !== undefined) as number[];
+      const updated = { ...prev };
+      const existing = [...(updated[transIdx] ?? [])];
       const idx = existing.indexOf(timeValue);
       if (idx < 0) return prev;
       existing.splice(idx, 1);
-      groupTransitionTimesRef.current = existing;
-      return [...existing];
+      updated[transIdx] = existing;
+      groupTransitionTimesRef.current = updated;
+      return updated;
     });
   };
 
@@ -908,13 +903,25 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (json.overlays && Array.isArray(json.overlays)) {
           setOverlays(json.overlays);
         }
-        if (json.groupTransitionTimes && Array.isArray(json.groupTransitionTimes)) {
-          // Migrate old per-cycle format (has nulls) → flat sorted list of absolute times.
-          const migrated = (json.groupTransitionTimes as (number | null | undefined)[])
-            .filter(x => x != null && x !== undefined) as number[];
-          migrated.sort((a, b) => a - b);
-          groupTransitionTimesRef.current = migrated as number[];
-          setGroupTransitionTimes([...migrated] as number[]);
+        if (json.groupTransitionTimes) {
+          if (Array.isArray(json.groupTransitionTimes)) {
+            // Old format: flat array — can't reliably split per transIdx, so discard.
+            groupTransitionTimesRef.current = {};
+            setGroupTransitionTimes({});
+          } else if (typeof json.groupTransitionTimes === "object") {
+            // New format: Record<number, number[]>
+            const loaded2: Record<number, number[]> = {};
+            for (const key of Object.keys(json.groupTransitionTimes)) {
+              const times = json.groupTransitionTimes[key];
+              if (Array.isArray(times)) {
+                loaded2[Number(key)] = (times as (number | null | undefined)[])
+                  .filter(x => x != null) as number[];
+                loaded2[Number(key)].sort((a, b) => a - b);
+              }
+            }
+            groupTransitionTimesRef.current = loaded2;
+            setGroupTransitionTimes(loaded2);
+          }
         }
         const audioDur = audioRef.current?.duration ?? 0;
         const savedDur: number | null = json.audioDuration ?? null;
@@ -1184,9 +1191,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     <div key={groupIdx}>
                       {groupIdx > 0 && groups.length > 1 && (() => {
                         const transIdx = groupIdx - 1;
-                        // Flat sorted list — all non-null values are valid transition times.
-                        const transChips = (groupTransitionTimes as (number | undefined | null)[])
-                          .filter(x => x != null) as number[];
+                        // Per-transition times — only show chips for this specific transIdx.
+                        const transChips = (groupTransitionTimes[transIdx] ?? []) as number[];
                         const isUnmarked = transChips.length === 0;
                         return (
                           <div className={`flex items-center gap-1.5 px-1 mb-2 mt-0.5 ${isUnmarked ? "py-0.5 rounded bg-amber-50 border border-dashed border-amber-300" : ""}`}>
@@ -1213,7 +1219,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                   {formatTime(t)}
                                 </button>
                                 <button
-                                  onClick={() => removeGroupTransition(t)}
+                                  onClick={() => removeGroupTransition(transIdx, t)}
                                   className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
                                   title="Remove this display switch time"
                                 >
