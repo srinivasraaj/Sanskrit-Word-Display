@@ -24,6 +24,7 @@ function drawCanvasFrame(
   ds: {
     groupLines: string[]; groupWords: string[]; groupStart: number;
     slokaFontSize: number; previousFontSize: number; highlightColor: string;
+    slokaColor: string; overlayTextColor: string;
     slokaBold: boolean; slokaItalic: boolean;
     overlays: OverlayMarker[]; localItems: string[];
   },
@@ -83,7 +84,7 @@ function drawCanvasFrame(
     ctx.lineWidth = Math.max(2, W * 0.004);
     ctx.stroke();
     // Draw text inside the box
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = ds.overlayTextColor;
     const startY = H / 2 - ((lines.length - 1) * lh) / 2;
     lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lh));
     return;
@@ -93,7 +94,7 @@ function drawCanvasFrame(
   const fontStyle = ds.slokaItalic ? "italic " : "";
   const fontWeight = ds.slokaBold ? "bold " : "";
   ctx.font = `${fontStyle}${fontWeight}${SF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = ds.slokaColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   const slokaLineH = SF * 1.5;
@@ -164,7 +165,7 @@ function drawCanvasFrame(
 }
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
-  const { groups: rawGroups, audioFile, highlightColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
+  const { groups: rawGroups, audioFile, highlightColor, slokaColor, overlayTextColor, highlightedFontSize, previousFontSize, slokaFontSize, slokaBold, slokaItalic } = data;
   const groups = rawGroups ?? [];
 
   const flatItems = groups.flatMap((g) => g.words);
@@ -224,6 +225,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     slokaFontSize: 32,
     previousFontSize: 28,
     highlightColor: "#f59e0b",
+    slokaColor: "#000000",
+    overlayTextColor: "#1a1a1a",
     slokaBold: false,
     slokaItalic: false,
     overlays: [] as OverlayMarker[],
@@ -260,6 +263,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       slokaFontSize,
       previousFontSize,
       highlightColor,
+      slokaColor,
+      overlayTextColor,
       slokaBold,
       slokaItalic,
       overlays,
@@ -1574,7 +1579,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       style={{
                         fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                         fontSize: "clamp(28px, 5vw, 64px)",
-                        color: "#1a1a1a",
+                        color: overlayTextColor,
                         wordBreak: "break-word",
                         margin: 0,
                       }}>
@@ -1598,7 +1603,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <div className="flex flex-col items-center gap-y-1">
                   {displayGroupLines.map((line, i) => (
                     <p key={i} className="font-serif leading-relaxed text-center"
-                      style={{ color: "#000000", fontSize: `${slokaFontSize}px`, fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
+                      style={{ color: slokaColor, fontSize: `${slokaFontSize}px`, fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif", fontWeight: slokaBold ? "700" : "400", fontStyle: slokaItalic ? "italic" : "normal" }}>
                       {line}
                     </p>
                   ))}
