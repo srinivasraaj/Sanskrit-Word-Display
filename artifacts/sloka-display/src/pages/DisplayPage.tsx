@@ -210,7 +210,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
-  useEffect(() => { timestampsRef.current = timestamps; }, [timestamps]);
+  // NOTE: timestampsRef is kept in sync manually inside each function that updates it.
+  // Do NOT add a useEffect to sync state→ref here — that causes stale overwrites because
+  // React processes old setTimestamps calls after newer direct ref writes.
   useEffect(() => {
     displayStateRef.current = {
       groupLines: groups[displayGroup]?.lines ?? [],
