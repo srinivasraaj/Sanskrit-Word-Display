@@ -361,21 +361,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         lastActiveRef.current = active;
         setHighlightCleared(false);
         setCurrentIndex(active);
-        // Clear any pending last-word highlight timer on every real index change.
-        if (lastWordClearTimerRef.current) {
-          clearTimeout(lastWordClearTimerRef.current);
-          lastWordClearTimerRef.current = null;
-        }
-        // If this is the last valid timestamp, schedule clearing the highlight after 5s.
-        const lastValidIdx = ts.reduce<number>((last, v, i) => v != null ? i : last, -1);
-        const isLastWord = active >= 0 && active === lastValidIdx;
-        if (isLastWord) {
-          lastWordClearTimerRef.current = setTimeout(() => {
-            lastWordClearTimerRef.current = null;
-            lastClearedIdxRef.current = lastValidIdx;
-            setHighlightCleared(true);
-          }, 5000);
-        }
       }
     }
 
@@ -469,6 +454,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   }, [recordedBlob]);
 
+  // 5-second timer to clear the last-word highlight.
+  // Lives in a useEffect so it is immune to RAF/toggleAudio resets.
+  useEffect(() => {
+    if (phase !== "playback") return;
+    const ts = timestampsRef.current;
+    const lastValidIdx = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
+    if (currentIndex < 0 || currentIndex !== lastValidIdx) return;
+    const timer = setTimeout(() => {
+      lastClearedIdxRef.current = lastValidIdx;
+      setHighlightCleared(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [currentIndex, phase]);
 
   const toggleAudio = () => {
     const audio = audioRef.current;
