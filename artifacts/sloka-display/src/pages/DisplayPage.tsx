@@ -173,6 +173,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const audioEndedInTimingRef = useRef(false);
   const lastActiveRef = useRef(-1);
   const lastAudioTimeUpdateRef = useRef(0);
+  const goToPlaybackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,6 +210,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  useEffect(() => { timestampsRef.current = timestamps; }, [timestamps]);
   useEffect(() => {
     displayStateRef.current = {
       groupLines: groups[displayGroup]?.lines ?? [],
@@ -285,8 +287,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
 
     let active = -1;
-    if (t > 0) {
-      const ts = timestampsRef.current;
+    const ts = timestampsRef.current;
+    if (ts.length > 0) {
       const ahead = t + playbackOffsetRef.current;
       for (let i = ts.length - 1; i >= 0; i--) {
         if (ahead >= ts[i]) { active = i; break; }
@@ -311,7 +313,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => {
     if (audioEndedInTimingRef.current && timingIndex >= localItems.length) {
       audioEndedInTimingRef.current = false;
-      setTimeout(() => goToPlayback(), 600);
+      if (goToPlaybackTimerRef.current) clearTimeout(goToPlaybackTimerRef.current);
+      goToPlaybackTimerRef.current = setTimeout(() => {
+        goToPlaybackTimerRef.current = null;
+        goToPlayback();
+      }, 600);
     }
   }, [timingIndex]);
 
@@ -345,7 +351,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setIsPlaying(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     } else {
-      audio.play();
+      lastActiveRef.current = -1;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          setIsPlaying(false);
+          if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+        });
+      }
       setIsPlaying(true);
       rafRef.current = requestAnimationFrame(tick);
     }
@@ -405,13 +418,18 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }, [phase, handleEnterTiming, editingIndex, editValue]);
 
   const goToPlayback = () => {
+    if (goToPlaybackTimerRef.current) {
+      clearTimeout(goToPlaybackTimerRef.current);
+      goToPlaybackTimerRef.current = null;
+    }
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
+    lastActiveRef.current = -1;
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
     setDisplayGroup(0);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     setPhase("playback");
   };
 
@@ -471,10 +489,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   };
 
   const restartTiming = () => {
+    if (goToPlaybackTimerRef.current) { clearTimeout(goToPlaybackTimerRef.current); goToPlaybackTimerRef.current = null; }
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    lastActiveRef.current = -1;
     timestampsRef.current = [];
     timingIndexRef.current = 0;
     setTimestamps([]);
@@ -489,9 +509,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = 0;
+    lastActiveRef.current = -1;
     setCurrentIndex(-1);
     setDisplayGroup(0);
-    audio.play();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        setIsPlaying(false);
+        if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      });
+    }
     setIsPlaying(true);
     rafRef.current = requestAnimationFrame(tick);
   };
