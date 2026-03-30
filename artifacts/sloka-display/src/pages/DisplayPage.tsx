@@ -311,11 +311,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     // Compute display group every frame for smooth group transitions
     const nw = localItemsLenRef.current;
     const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
-    const gtt = groupTransitionTimesRef.current;
+    const gtt = groupTransitionTimesRef.current ?? [];
     const numGroups = numGroupsRef.current;
     const numTrans = Math.max(0, numGroups - 1);
     const cycleOffset = cycleIdx * numTrans;
-    const hasTransTimes = numTrans > 0 &&
+    const hasTransTimes = numTrans > 0 && Array.isArray(gtt) &&
       gtt.slice(cycleOffset, cycleOffset + numTrans).some(x => x !== undefined && x !== null);
     let newGroup = 0;
     if (hasTransTimes) {
@@ -506,10 +506,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     // Compute display group from transition times (if set) or fall back to word position
     const nw = localItems.length;
     const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
-    const gtt = groupTransitionTimesRef.current;
+    const gtt = groupTransitionTimesRef.current ?? [];
     const numTrans = Math.max(0, groups.length - 1);
     const cycleOffset = cycleIdx * numTrans;
-    const hasTransTimes = numTrans > 0 &&
+    const hasTransTimes = numTrans > 0 && Array.isArray(gtt) &&
       gtt.slice(cycleOffset, cycleOffset + numTrans).some(x => x !== undefined && x !== null);
     let newGroup = 0;
     if (hasTransTimes) {
@@ -1128,10 +1128,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           const tv = groupTransitionTimes[flatIdx];
                           if (tv !== undefined && tv !== null) transChips.push({ cycleIdx: k, t: tv });
                         }
+                        const isUnmarked = transChips.length === 0;
                         return (
-                          <div className="flex items-center gap-1.5 px-1 mb-2 mt-0.5">
+                          <div className={`flex items-center gap-1.5 px-1 mb-2 mt-0.5 ${isUnmarked ? "py-0.5 rounded bg-amber-50 border border-dashed border-amber-300" : ""}`}>
                             <div className="h-px flex-1 bg-gray-200" />
-                            <span className="text-[9px] text-gray-400 uppercase tracking-wide font-semibold whitespace-nowrap">display switch</span>
+                            <span className={`text-[9px] uppercase tracking-wide font-semibold whitespace-nowrap ${isUnmarked ? "text-amber-600" : "text-gray-400"}`}>display switch</span>
+                            {isUnmarked && (
+                              <span className="text-[9px] text-amber-500 whitespace-nowrap font-medium">⚠ not marked</span>
+                            )}
                             {transChips.map(({ cycleIdx, t }) => (
                               <span key={cycleIdx}
                                 className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
@@ -1154,7 +1158,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             ))}
                             <button
                               onClick={() => markGroupTransition(transIdx)}
-                              className="text-[10px] px-2 py-0.5 rounded border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-colors whitespace-nowrap"
+                              className={`text-[10px] px-2 py-0.5 rounded border whitespace-nowrap transition-colors ${isUnmarked ? "border-amber-400 text-amber-700 bg-white hover:bg-amber-100 font-semibold" : "border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600"}`}
                               title="Mark the current audio time as when this section appears on screen"
                             >
                               Mark
