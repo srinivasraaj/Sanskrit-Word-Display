@@ -156,6 +156,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [displayGroup, setDisplayGroup] = useState(0);
+  const [groupTransitionTimes, setGroupTransitionTimes] = useState<(number | undefined)[]>([]);
+  const groupTransitionTimesRef = useRef<(number | undefined)[]>([]);
+  const lastDisplayGroupRef = useRef(0);
+  const groupStartIndicesRef = useRef<number[]>(groupStartIndices);
+  const numGroupsRef = useRef(groups.length);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -292,8 +297,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
     let active = -1;
     const ts = timestampsRef.current;
+    const ahead = t + playbackOffsetRef.current;
     if (ts.length > 0) {
-      const ahead = t + playbackOffsetRef.current;
       for (let i = ts.length - 1; i >= 0; i--) {
         if (ts[i] != null && ahead >= ts[i]) { active = i; break; }
       }
@@ -302,8 +307,38 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       lastActiveRef.current = active;
       setCurrentIndex(active);
     }
+
+    // Compute display group every frame for smooth group transitions
+    const nw = localItemsLenRef.current;
+    const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
+    const gtt = groupTransitionTimesRef.current;
+    const numGroups = numGroupsRef.current;
+    const numTrans = Math.max(0, numGroups - 1);
+    const cycleOffset = cycleIdx * numTrans;
+    const hasTransTimes = numTrans > 0 &&
+      gtt.slice(cycleOffset, cycleOffset + numTrans).some(x => x !== undefined && x !== null);
+    let newGroup = 0;
+    if (hasTransTimes) {
+      for (let tr = numTrans - 1; tr >= 0; tr--) {
+        const transTime = gtt[cycleOffset + tr];
+        if (transTime !== undefined && transTime !== null && ahead >= transTime) {
+          newGroup = Math.min(tr + 1, numGroups - 1); break;
+        }
+      }
+    } else if (active >= 0) {
+      const wordIdx = nw > 0 ? active % nw : active;
+      const gsi = groupStartIndicesRef.current;
+      for (let i = gsi.length - 1; i >= 0; i--) {
+        if (wordIdx >= gsi[i]) { newGroup = i; break; }
+      }
+    }
+    if (newGroup !== lastDisplayGroupRef.current) {
+      lastDisplayGroupRef.current = newGroup;
+      setDisplayGroup(newGroup);
+    }
+
     if (isRecordingRef.current) {
-      drawCanvasFrame(canvasRef.current, lastActiveRef.current, displayStateRef.current, audioRef.current?.currentTime ?? 0);
+      drawCanvasFrame(canvasRef.current, lastActiveRef.current, displayStateRef.current, t);
     }
     rafRef.current = requestAnimationFrame(tick);
   }, []);
@@ -347,15 +382,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   }, [recordedBlob]);
 
-  useEffect(() => {
-    if (currentIndex < 0) return;
-    const wordIdx = localItems.length > 0 ? currentIndex % localItems.length : currentIndex;
-    let g = 0;
-    for (let i = groupStartIndices.length - 1; i >= 0; i--) {
-      if (wordIdx >= groupStartIndices[i]) { g = i; break; }
-    }
-    setDisplayGroup(g);
-  }, [currentIndex]);
 
   const toggleAudio = () => {
     const audio = audioRef.current;
@@ -561,6 +587,33 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setRetimeMenuGroup(null);
   };
 
+  const markGroupTransition = (transIdx: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const t = audio.currentTime;
+    const numTrans = Math.max(0, numGroupsRef.current - 1);
+    if (numTrans <= 0) return;
+    const nw = localItemsLenRef.current;
+    const cycleIdx = nw > 0 ? Math.floor(timingIndexRef.current / nw) : 0;
+    const flatIdx = cycleIdx * numTrans + transIdx;
+    const existing = [...groupTransitionTimesRef.current];
+    while (existing.length <= flatIdx) existing.push(undefined as unknown as number);
+    existing[flatIdx] = t;
+    groupTransitionTimesRef.current = existing;
+    setGroupTransitionTimes([...existing]);
+  };
+
+  const removeGroupTransition = (cycleIdx: number, transIdx: number) => {
+    const numTrans = Math.max(0, numGroupsRef.current - 1);
+    const flatIdx = cycleIdx * numTrans + transIdx;
+    const existing = [...groupTransitionTimesRef.current];
+    if (flatIdx < existing.length) {
+      existing[flatIdx] = undefined as unknown as number;
+      groupTransitionTimesRef.current = existing;
+      setGroupTransitionTimes([...existing]);
+    }
+  };
+
   const removeTimestamp = (cycleIdx: number, wordIdx: number) => {
     const nw = localItemsLenRef.current;
     const flatIdx = cycleIdx * nw + wordIdx;
@@ -744,6 +797,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const payload = {
       words: localItems,
       timestamps,
+      groupTransitionTimes,
       overlays,
       audioDuration: audioRef.current?.duration ?? null,
     };
@@ -777,6 +831,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         }
         if (json.overlays && Array.isArray(json.overlays)) {
           setOverlays(json.overlays);
+        }
+        if (json.groupTransitionTimes && Array.isArray(json.groupTransitionTimes)) {
+          groupTransitionTimesRef.current = json.groupTransitionTimes;
+          setGroupTransitionTimes(json.groupTransitionTimes);
         }
         const audioDur = audioRef.current?.duration ?? 0;
         const savedDur: number | null = json.audioDuration ?? null;
@@ -1044,6 +1102,50 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   const groupFullyTimed = cycleTimingIndex >= groupEnd;
                   return (
                     <div key={groupIdx}>
+                      {groupIdx > 0 && groups.length > 1 && (() => {
+                        const transIdx = groupIdx - 1;
+                        const numTrans = groups.length - 1;
+                        const transChips: { cycleIdx: number; t: number }[] = [];
+                        for (let k = 0; k < numCycles; k++) {
+                          const flatIdx = k * numTrans + transIdx;
+                          const tv = groupTransitionTimes[flatIdx];
+                          if (tv !== undefined && tv !== null) transChips.push({ cycleIdx: k, t: tv });
+                        }
+                        return (
+                          <div className="flex items-center gap-1.5 px-1 mb-2 mt-0.5">
+                            <div className="h-px flex-1 bg-gray-200" />
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wide font-semibold whitespace-nowrap">display switch</span>
+                            {transChips.map(({ cycleIdx, t }) => (
+                              <span key={cycleIdx}
+                                className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
+                                style={{
+                                  background: cycleIdx === currentCycleIndex ? `${highlightColor}15` : "#f0fdf4",
+                                  borderColor: cycleIdx === currentCycleIndex ? highlightColor : "#86efac",
+                                  color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
+                                }}
+                              >
+                                {numCycles > 1 && <span className="opacity-70 mr-0.5">C{cycleIdx + 1}:</span>}
+                                {formatTime(t)}
+                                <button
+                                  onClick={() => removeGroupTransition(cycleIdx, transIdx)}
+                                  className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
+                                  title={`Remove Cycle ${cycleIdx + 1} transition time`}
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ))}
+                            <button
+                              onClick={() => markGroupTransition(transIdx)}
+                              className="text-[10px] px-2 py-0.5 rounded border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-colors whitespace-nowrap"
+                              title="Mark the current audio time as when this section appears on screen"
+                            >
+                              Mark
+                            </button>
+                            <div className="h-px flex-1 bg-gray-200" />
+                          </div>
+                        );
+                      })()}
                       <div className={`flex items-center justify-between mb-1 px-1 ${isCurrentGroup ? "text-amber-700" : "text-gray-400"}`}>
                         <button
                           onClick={() => markGroupStart(groupIdx)}
