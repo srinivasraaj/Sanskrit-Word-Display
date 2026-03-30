@@ -78,16 +78,21 @@ function drawCanvasFrame(
   slokaBottom += ds.groupLines.length * slokaLineH + 16;
 
   const divY = slokaBottom;
+  const lensH = 6;
+  const lensMid = divY + lensH / 2;
   const grad = ctx.createLinearGradient(0, 0, W, 0);
-  grad.addColorStop(0, "rgba(255,215,0,0)");
-  grad.addColorStop(0.05, "rgba(255,215,0,0.15)");
-  grad.addColorStop(0.35, "rgba(255,215,0,1)");
-  grad.addColorStop(0.5, "rgba(255,255,180,1)");
-  grad.addColorStop(0.65, "rgba(255,215,0,1)");
-  grad.addColorStop(0.95, "rgba(255,215,0,0.15)");
-  grad.addColorStop(1, "rgba(255,215,0,0)");
+  grad.addColorStop(0,    "rgba(218,165,32,0)");
+  grad.addColorStop(0.35, "rgba(255,215,0,0.9)");
+  grad.addColorStop(0.5,  "rgba(255,232,124,1)");
+  grad.addColorStop(0.65, "rgba(255,215,0,0.9)");
+  grad.addColorStop(1,    "rgba(218,165,32,0)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, divY, W, 3);
+  ctx.beginPath();
+  ctx.moveTo(0, lensMid);
+  ctx.quadraticCurveTo(W / 2, divY,          W, lensMid);
+  ctx.quadraticCurveTo(W / 2, divY + lensH,  0, lensMid);
+  ctx.closePath();
+  ctx.fill();
 
   const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
   const ROWS = 3;
@@ -1489,8 +1494,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </div>
               </div>
 
-              <div className="w-full relative" style={{ height: "3px" }}>
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to right, transparent 0%, rgba(255,215,0,0.15) 5%, rgba(255,215,0,1) 35%, rgba(255,255,180,1) 50%, rgba(255,215,0,1) 65%, rgba(255,215,0,0.15) 95%, transparent 100%)", boxShadow: "0 0 12px 4px rgba(255,215,0,0.6), 0 0 24px 8px rgba(255,200,0,0.3), 0 0 2px 1px rgba(255,255,200,0.9)" }} />
+              <div className="w-full" style={{ height: "6px" }}>
+                <svg width="100%" height="6" viewBox="0 0 1000 6" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="glGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#DAA520" stopOpacity="0" />
+                      <stop offset="35%" stopColor="#FFD700" stopOpacity="0.9" />
+                      <stop offset="50%" stopColor="#FFE87C" stopOpacity="1" />
+                      <stop offset="65%" stopColor="#FFD700" stopOpacity="0.9" />
+                      <stop offset="100%" stopColor="#DAA520" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M 0 3 Q 500 0 1000 3 Q 500 6 0 3 Z" fill="url(#glGrad)" />
+                </svg>
               </div>
 
               <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
