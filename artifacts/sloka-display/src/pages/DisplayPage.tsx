@@ -143,9 +143,9 @@ function drawCanvasFrame(
     const item = ds.localItems[globalIdx];
     if (!item) return;
     const numWordsInCanvas = ds.localItems.length;
-    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 && !ds.highlightCleared ? activeIdx % numWordsInCanvas : -1;
-    const isActive = globalIdx === activeWordIdx;
-    const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
+    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : -1;
+    const isActive = !ds.highlightCleared && globalIdx === activeWordIdx;
+    const isPast = activeWordIdx >= 0 && (ds.highlightCleared ? globalIdx <= activeWordIdx : globalIdx < activeWordIdx);
     if (!isActive && !isPast) return;
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
@@ -1668,9 +1668,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
-                          const activeWordIdx = currentIndex >= 0 && !highlightCleared && localItems.length > 0 ? currentIndex % localItems.length : -1;
-                          const isActive = globalIdx === activeWordIdx;
-                          const isPast = activeWordIdx >= 0 && globalIdx < activeWordIdx;
+                          const activeWordIdx = currentIndex >= 0 && localItems.length > 0 ? currentIndex % localItems.length : -1;
+                          const isActive = !highlightCleared && globalIdx === activeWordIdx;
+                          const isPast = activeWordIdx >= 0 && (highlightCleared ? globalIdx <= activeWordIdx : globalIdx < activeWordIdx);
                           return (
                             <div key={globalIdx} className="flex items-center select-none"
                               style={{
