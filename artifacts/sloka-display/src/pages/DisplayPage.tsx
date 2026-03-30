@@ -656,6 +656,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   };
 
+  // Seek audio to a specific time (used by clickable timestamp chips).
+  const seekToTime = (t: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = t;
+    setAudioCurrentTime(t);
+  };
+
   // Move the timing cursor to a specific word so it can be re-marked.
   // Uses the current cycle index so it stays within the active cycle.
   const jumpToWord = (wordIdx: number) => {
@@ -1177,8 +1185,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                   color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
                                 }}
                               >
-                                {numCycles > 1 && <span className="opacity-70 mr-0.5">C{cycleIdx + 1}:</span>}
-                                {formatTime(t)}
+                                <button
+                                  onClick={() => seekToTime(t)}
+                                  className="hover:underline focus:outline-none"
+                                  title={`Seek to Cycle ${cycleIdx + 1} display switch time`}
+                                  style={{ color: "inherit" }}
+                                >
+                                  {numCycles > 1 && <span className="opacity-70 mr-0.5">C{cycleIdx + 1}:</span>}
+                                  {formatTime(t)}
+                                </button>
                                 <button
                                   onClick={() => removeGroupTransition(cycleIdx, transIdx)}
                                   className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
@@ -1329,7 +1344,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                         color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
                                       }}
                                     >
-                                      C{cycleIdx + 1}: {formatTime(t)}
+                                      <button
+                                        onClick={() => seekToTime(t)}
+                                        className="hover:underline focus:outline-none"
+                                        title={`Seek to Cycle ${cycleIdx + 1} timestamp`}
+                                        style={{ color: "inherit" }}
+                                      >
+                                        C{cycleIdx + 1}: {formatTime(t)}
+                                      </button>
                                       <button
                                         onClick={() => removeTimestamp(cycleIdx, i)}
                                         className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
