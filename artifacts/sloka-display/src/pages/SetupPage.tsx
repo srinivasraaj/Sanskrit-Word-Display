@@ -85,30 +85,28 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
     URL.revokeObjectURL(url);
   };
 
-  const loadConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadConfig = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const json = JSON.parse(ev.target?.result as string);
-        if (json.slokaText !== undefined) setSlokaText(json.slokaText);
-        if (Array.isArray(json.wordsTexts)) setWordsTexts(json.wordsTexts);
-        if (json.highlightColor) setHighlightColor(json.highlightColor);
-        if (json.slokaColor) setSlokaColor(json.slokaColor);
-        if (json.overlayTextColor) setOverlayTextColor(json.overlayTextColor);
-        if (json.pastWordColor) setPastWordColor(json.pastWordColor);
-        if (json.highlightedFontSize) setHighlightedFontSize(json.highlightedFontSize);
-        if (json.previousFontSize) setPreviousFontSize(json.previousFontSize);
-        if (json.slokaFontSize) setSlokaFontSize(json.slokaFontSize);
-        if (json.slokaBold !== undefined) setSlokaBold(json.slokaBold);
-        if (json.slokaItalic !== undefined) setSlokaItalic(json.slokaItalic);
-      } catch {
-        alert("Could not read config file.");
-      }
-    };
-    reader.readAsText(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (typeof json !== "object" || json === null) throw new Error("Invalid config");
+      if (typeof json.slokaText === "string") setSlokaText(json.slokaText);
+      if (Array.isArray(json.wordsTexts)) setWordsTexts(json.wordsTexts.map(String));
+      if (typeof json.highlightColor === "string" && json.highlightColor) setHighlightColor(json.highlightColor);
+      if (typeof json.slokaColor === "string" && json.slokaColor) setSlokaColor(json.slokaColor);
+      if (typeof json.overlayTextColor === "string" && json.overlayTextColor) setOverlayTextColor(json.overlayTextColor);
+      if (typeof json.pastWordColor === "string" && json.pastWordColor) setPastWordColor(json.pastWordColor);
+      if (typeof json.highlightedFontSize === "number" && json.highlightedFontSize > 0) setHighlightedFontSize(json.highlightedFontSize);
+      if (typeof json.previousFontSize === "number" && json.previousFontSize > 0) setPreviousFontSize(json.previousFontSize);
+      if (typeof json.slokaFontSize === "number" && json.slokaFontSize > 0) setSlokaFontSize(json.slokaFontSize);
+      if (typeof json.slokaBold === "boolean") setSlokaBold(json.slokaBold);
+      if (typeof json.slokaItalic === "boolean") setSlokaItalic(json.slokaItalic);
+    } catch {
+      alert("Could not read config file. Make sure it is a valid sloka-config.json.");
+    }
   };
 
   const slokaLines = slokaText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
