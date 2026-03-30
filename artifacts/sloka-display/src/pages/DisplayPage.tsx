@@ -902,19 +902,22 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           if (activeOverlays.length === 0) return null;
           const ov = activeOverlays[activeOverlays.length - 1];
           return (
-            <div className="absolute inset-0 z-50 flex items-center justify-center"
-              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
-              <div className="flex flex-col items-center gap-3 max-w-lg px-6 py-5 rounded-2xl bg-white/90 shadow-2xl text-center">
-                {ov.imageDataUrl && (
-                  <img src={ov.imageDataUrl} alt="" className="max-h-56 max-w-full rounded-lg object-contain shadow" />
-                )}
-                {ov.text && (
-                  <p className="text-2xl font-semibold text-gray-900 leading-snug"
-                    style={{ fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif" }}>
-                    {ov.text}
-                  </p>
-                )}
-              </div>
+            <div className="w-full flex flex-col items-center justify-center px-4 py-5 bg-white">
+              {ov.imageDataUrl && (
+                <img src={ov.imageDataUrl} alt="" className="max-h-48 max-w-full rounded-lg object-contain mb-3" />
+              )}
+              {ov.text && (
+                <p className="text-center font-semibold leading-tight w-full"
+                  style={{
+                    fontFamily: "'Mandali', 'Noto Sans Telugu', Georgia, serif",
+                    fontSize: "clamp(24px, 5vw, 56px)",
+                    color: "#1a1a1a",
+                    padding: "0 2%",
+                    wordBreak: "break-word",
+                  }}>
+                  {ov.text}
+                </p>
+              )}
             </div>
           );
         })()}
