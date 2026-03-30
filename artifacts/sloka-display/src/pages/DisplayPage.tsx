@@ -426,6 +426,28 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
   };
 
+  const handlePlaybackSeek = (t: number) => {
+    if (audioRef.current) audioRef.current.currentTime = t;
+    setAudioCurrentTime(t);
+    const ts = timestampsRef.current;
+    const ahead = t + playbackOffsetRef.current;
+    let active = -1;
+    for (let i = ts.length - 1; i >= 0; i--) {
+      if (ahead >= ts[i]) { active = i; break; }
+    }
+    lastActiveRef.current = active;
+    setCurrentIndex(active);
+    if (active >= 0) {
+      let g = 0;
+      for (let i = groupStartIndices.length - 1; i >= 0; i--) {
+        if (active >= groupStartIndices[i]) { g = i; break; }
+      }
+      setDisplayGroup(g);
+    } else {
+      setDisplayGroup(0);
+    }
+  };
+
   const [retimeMenuGroup, setRetimeMenuGroup] = useState<number | null>(null);
 
   const retimeFromGroup = (groupIdx: number, resetAudio: boolean) => {
@@ -1022,9 +1044,22 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       )}
 
       {!isRecording && audioDuration > 0 && (
-        <div className="h-1 bg-gray-200">
-          <div className="h-full bg-amber-500 transition-all duration-100"
-            style={{ width: `${progress}%` }} />
+        <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-100">
+          <span className="text-xs font-mono text-amber-600 shrink-0 w-10 text-right">{formatTime(audioCurrentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={audioDuration}
+            step={0.05}
+            value={audioCurrentTime}
+            onChange={(e) => handlePlaybackSeek(parseFloat(e.target.value))}
+            className="seek-bar flex-1 cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #d97706 0%, #d97706 ${progress}%, #e5e7eb ${progress}%, #e5e7eb 100%)`,
+              accentColor: "#d97706",
+            }}
+          />
+          <span className="text-xs font-mono text-gray-400 shrink-0 w-10">{formatTime(audioDuration)}</span>
         </div>
       )}
 
