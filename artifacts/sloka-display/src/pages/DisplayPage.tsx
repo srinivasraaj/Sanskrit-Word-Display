@@ -432,13 +432,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       if (active === lastClearedIdxRef.current) {
         lastActiveRef.current = active;
       } else {
-        // Genuinely different word — clear any intentional-clear flag and restore.
         lastClearedIdxRef.current = null;
         lastActiveRef.current = active;
         lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
         setCurrentIndex(active);
-        // If this is the last word in its display group, start the 5-second clear.
         const nw2 = localItemsLenRef.current;
         const localIdx = nw2 > 0 ? active % nw2 : -1;
         const gsi = groupStartIndicesRef.current;
@@ -451,7 +449,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           const groupEnd = groupOfActive + 1 < gsi.length ? gsi[groupOfActive + 1] - 1 : nw2 - 1;
           isLastInGroup = localIdx === groupEnd;
         }
-        if (active >= 0 && isLastInGroup) {
+        let isLastTimedInCycle = false;
+        if (nw2 > 0 && active >= 0) {
+          const base = Math.floor(active / nw2) * nw2;
+          const cycleEnd = Math.min(base + nw2, ts.length);
+          let foundLater = false;
+          for (let j = active + 1; j < cycleEnd; j++) {
+            if (ts[j] != null) { foundLater = true; break; }
+          }
+          isLastTimedInCycle = !foundLater;
+        }
+        if (active >= 0 && (isLastInGroup || isLastTimedInCycle)) {
           lastWordHitTimeRef.current = performance.now();
           if (lastWordClearTimerRef.current) clearTimeout(lastWordClearTimerRef.current);
           lastWordClearTimerRef.current = setTimeout(() => {
