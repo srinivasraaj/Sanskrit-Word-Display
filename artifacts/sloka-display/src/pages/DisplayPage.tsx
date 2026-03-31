@@ -130,37 +130,13 @@ function drawCanvasFrame(
 
   const numCols = Math.ceil(ds.groupWords.length / ROWS);
 
-  // Measure the widest word (+ arrow) per column directly on the canvas context.
-  // measureText() is self-consistent within canvas — text renders at exactly
-  // the width it measures — so this is the most reliable layout approach.
-  const colWidths: number[] = [];
-  for (let c = 0; c < numCols; c++) {
-    let maxW = 0;
-    for (let r = 0; r < ROWS; r++) {
-      const i = c * ROWS + r;
-      if (i >= ds.groupWords.length) break;
-      const globalIdx = ds.groupStart + i;
-      const item = ds.localItems[globalIdx];
-      if (!item) continue;
-      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-      const w = ctx.measureText("▶ " + item).width;
-      maxW = Math.max(maxW, w);
-    }
-    colWidths.push(maxW);
-  }
-
-  // Scale columns proportionally if they overflow the canvas width.
-  const colGap = Math.max(W * 0.025, 20);
-  const totalContent = colWidths.reduce((a, b) => a + b, 0) + colGap * (numCols - 1);
-  const scale = totalContent > W * 0.96 ? (W * 0.96) / totalContent : 1;
-
-  const startX2 = W * 0.025;
-  const rColX: number[] = [];
-  let cx = startX2;
-  for (let c = 0; c < numCols; c++) {
-    rColX.push(cx);
-    cx += (colWidths[c] + colGap) * scale;
-  }
+  // Use DOM-measured column fractions — the HTML preview shows correct layout,
+  // so we map those proportional positions onto the canvas.  This avoids
+  // ctx.measureText() over-estimating Telugu glyph widths and clipping columns.
+  const colXFractions = ds.colXFractions || [];
+  const rColX = colXFractions.length >= numCols
+    ? colXFractions.map((f: number) => W * 0.025 + f * (W * 0.95))
+    : Array.from({ length: numCols }, (_, c) => W * 0.025 + c * ((W * 0.95) / numCols));
 
   // Arrow width for drawing the active-word marker.
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
