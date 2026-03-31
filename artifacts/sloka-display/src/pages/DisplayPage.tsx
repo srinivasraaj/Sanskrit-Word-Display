@@ -128,41 +128,68 @@ function drawCanvasFrame(
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
   const wordsY = divY + 48;
 
-  // Divide usable width equally among columns — mirrors the HTML flex layout
   const numCols = Math.ceil(ds.groupWords.length / ROWS);
-  const usableW = W - 2 * startX;
-  const slotW = usableW / numCols;
+  const COL_GAP = W * 0.025;
 
-  // Pre-measure arrow width at the active (bold) font
+  // Step 1: measure each word at BOTH font sizes; column width = max across all its words.
+  // We must measure ALL words (including future/invisible) so layout is stable every frame.
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   const arrowW = ctx.measureText("▶ ").width;
+  const colMaxWFA: number[] = Array(numCols).fill(0);
+  const colMaxWF: number[]  = Array(numCols).fill(0);
+  for (let i = 0; i < ds.groupWords.length; i++) {
+    const item = ds.localItems[ds.groupStart + i];
+    if (!item) continue;
+    const col = Math.floor(i / ROWS);
+    ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+    colMaxWFA[col] = Math.max(colMaxWFA[col], ctx.measureText(item).width);
+    ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+    colMaxWF[col]  = Math.max(colMaxWF[col],  ctx.measureText(item).width);
+  }
+  // Each column reserves: widest-word-at-WFA + arrowW (one arrow per column, worst-case)
+  const colWidths = colMaxWFA.map((w) => w + arrowW);
+
+  // Step 2: compute cumulative column start positions.
+  const colX: number[] = [startX];
+  for (let c = 1; c < numCols; c++) {
+    colX[c] = colX[c - 1] + colWidths[c - 1] + COL_GAP;
+  }
+
+  // Step 3: if the layout overflows the canvas, scale BOTH font sizes and positions together.
+  const totalW = colX[numCols - 1] + colWidths[numCols - 1] + startX;
+  const fontScale = totalW > W ? (W - 2 * startX - (numCols - 1) * COL_GAP) /
+    colMaxWFA.reduce((s, w) => s + w + arrowW, 0) : 1;
+  const rWF  = WF  * fontScale;
+  const rWFA = WFA * fontScale;
+  const rArrowW = arrowW * fontScale;
+  const rColX = colX.map((x) => x * fontScale + startX * (1 - fontScale));
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
-  ds.groupWords.forEach((_, i) => {
+  const numWordsInCanvas = ds.localItems.length;
+  const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : -1;
+  for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
-    if (!item) return;
-    const numWordsInCanvas = ds.localItems.length;
-    const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : -1;
+    if (!item) continue;
     const isActive = !ds.highlightCleared && globalIdx === activeWordIdx;
     const isPast = activeWordIdx >= 0 && (ds.highlightCleared ? globalIdx <= activeWordIdx : globalIdx < activeWordIdx);
-    if (!isActive && !isPast) return;
+    if (!isActive && !isPast) continue;
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
-    const x = startX + col * slotW;
+    const x = rColX[col];
     const y = wordsY + row * rowGap;
     if (isActive) {
-      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.font = `bold ${rWFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
       ctx.fillText("▶ ", x, y);
-      ctx.fillText(item, x + arrowW, y);
+      ctx.fillText(item, x + rArrowW, y);
     } else {
-      ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.font = `${rWF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.pastWordColor;
       ctx.fillText(item, x, y);
     }
-  });
+  }
 }
 
 export default function DisplayPage({ data, onBack }: DisplayPageProps) {
