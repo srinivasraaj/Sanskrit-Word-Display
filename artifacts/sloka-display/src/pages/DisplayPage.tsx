@@ -672,6 +672,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = audioRef.current;
     if (audio) { audio.pause(); audio.currentTime = 0; }
     setIsPlaying(false);
+    if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
     lastClearedIdxRef.current = null;
@@ -686,6 +687,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const handlePlaybackSeek = (seekT: number) => {
     if (audioRef.current) audioRef.current.currentTime = seekT;
     setAudioCurrentTime(seekT);
+    if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
+    lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
+    setHighlightCleared(false);
     const ts = timestampsRef.current;
     const ahead = seekT + playbackOffsetRef.current;
     let active = -1;
@@ -870,10 +875,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const goBackToTiming = () => {
     if (goToPlaybackTimerRef.current) { clearTimeout(goToPlaybackTimerRef.current); goToPlaybackTimerRef.current = null; }
+    if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
     const audio = audioRef.current;
     if (audio) { audio.pause(); }
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    lastActiveRef.current = -1;
+    lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
+    setHighlightCleared(false);
+    setCurrentIndex(-1);
     setPhase("timing");
   };
 
