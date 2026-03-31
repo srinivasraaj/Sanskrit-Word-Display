@@ -217,6 +217,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const goToPlaybackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastWordClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastClearedIdxRef = useRef<number | null>(null);
+  const lastWordHitTimeRef = useRef<number>(-1);
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -359,9 +360,38 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         // Genuinely different word — clear any intentional-clear flag and restore.
         lastClearedIdxRef.current = null;
         lastActiveRef.current = active;
+        lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
         setCurrentIndex(active);
+        // If this is the last word, start the 5-second clear.
+        const lastValidIdx = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
+        if (active >= 0 && active === lastValidIdx) {
+          lastWordHitTimeRef.current = performance.now();
+          // Fallback setTimeout in case the RAF stops (audio ends) before 5s.
+          if (lastWordClearTimerRef.current) clearTimeout(lastWordClearTimerRef.current);
+          lastWordClearTimerRef.current = setTimeout(() => {
+            lastWordClearTimerRef.current = null;
+            if (lastWordHitTimeRef.current > 0) {
+              lastClearedIdxRef.current = lastValidIdx;
+              lastWordHitTimeRef.current = -1;
+              setHighlightCleared(true);
+            }
+          }, 5000);
+        }
       }
+    }
+
+    // Every frame: check if 5 seconds have passed since the last word was highlighted.
+    if (
+      lastWordHitTimeRef.current > 0 &&
+      !displayStateRef.current.highlightCleared &&
+      performance.now() - lastWordHitTimeRef.current >= 5000
+    ) {
+      const lastValidIdx2 = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
+      lastClearedIdxRef.current = lastValidIdx2;
+      lastWordHitTimeRef.current = -1;
+      if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
+      setHighlightCleared(true);
     }
 
     // Compute display group every frame for smooth group transitions.
@@ -454,19 +484,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   }, [recordedBlob]);
 
-  // 5-second timer to clear the last-word highlight.
-  // Lives in a useEffect so it is immune to RAF/toggleAudio resets.
-  useEffect(() => {
-    if (phase !== "playback") return;
-    const ts = timestampsRef.current;
-    const lastValidIdx = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
-    if (currentIndex < 0 || currentIndex !== lastValidIdx) return;
-    const timer = setTimeout(() => {
-      lastClearedIdxRef.current = lastValidIdx;
-      setHighlightCleared(true);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [currentIndex, phase]);
 
   const toggleAudio = () => {
     const audio = audioRef.current;
@@ -559,6 +576,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     lastActiveRef.current = -1;
     lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
@@ -574,6 +592,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
     lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setAudioCurrentTime(0);
@@ -698,6 +717,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimingIndex(startIdx);
     if (resetAudio) setAudioCurrentTime(0);
     lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setRetimeMenuGroup(null);
@@ -786,6 +806,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setTimingIndex(0);
     setAudioCurrentTime(0);
     lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
@@ -799,6 +820,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
     lastClearedIdxRef.current = null;
+    lastWordHitTimeRef.current = -1;
     setHighlightCleared(false);
     setCurrentIndex(-1);
     setDisplayGroup(0);
@@ -863,6 +885,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       lastActiveRef.current = -1;
       lastDisplayGroupRef.current = 0;
       lastClearedIdxRef.current = null;
+      lastWordHitTimeRef.current = -1;
       setHighlightCleared(false);
       setCurrentIndex(-1);
       setDisplayGroup(0);
