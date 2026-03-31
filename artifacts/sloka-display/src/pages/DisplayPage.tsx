@@ -437,16 +437,26 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
         setCurrentIndex(active);
-        // If this is the last word, start the 5-second clear.
-        const lastValidIdx = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
-        if (active >= 0 && active === lastValidIdx) {
+        // If this is the last word in its display group, start the 5-second clear.
+        const nw2 = localItemsLenRef.current;
+        const localIdx = nw2 > 0 ? active % nw2 : -1;
+        const gsi = groupStartIndicesRef.current;
+        let isLastInGroup = false;
+        if (localIdx >= 0) {
+          let groupOfActive = 0;
+          for (let gi = gsi.length - 1; gi >= 0; gi--) {
+            if (localIdx >= gsi[gi]) { groupOfActive = gi; break; }
+          }
+          const groupEnd = groupOfActive + 1 < gsi.length ? gsi[groupOfActive + 1] - 1 : nw2 - 1;
+          isLastInGroup = localIdx === groupEnd;
+        }
+        if (active >= 0 && isLastInGroup) {
           lastWordHitTimeRef.current = performance.now();
-          // Fallback setTimeout in case the RAF stops (audio ends) before 5s.
           if (lastWordClearTimerRef.current) clearTimeout(lastWordClearTimerRef.current);
           lastWordClearTimerRef.current = setTimeout(() => {
             lastWordClearTimerRef.current = null;
             if (lastWordHitTimeRef.current > 0) {
-              lastClearedIdxRef.current = lastValidIdx;
+              lastClearedIdxRef.current = active;
               lastWordHitTimeRef.current = -1;
               setHighlightCleared(true);
             }
@@ -455,14 +465,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       }
     }
 
-    // Every frame: check if 5 seconds have passed since the last word was highlighted.
+    // Every frame: check if 5 seconds have passed since the last word in a group was highlighted.
     if (
       lastWordHitTimeRef.current > 0 &&
       !displayStateRef.current.highlightCleared &&
       performance.now() - lastWordHitTimeRef.current >= 5000
     ) {
-      const lastValidIdx2 = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
-      lastClearedIdxRef.current = lastValidIdx2;
+      lastClearedIdxRef.current = lastActiveRef.current;
       lastWordHitTimeRef.current = -1;
       if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
       setHighlightCleared(true);
