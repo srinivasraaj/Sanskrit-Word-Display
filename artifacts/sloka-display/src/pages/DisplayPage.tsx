@@ -18,7 +18,7 @@ interface DisplayPageProps {
 
 type Phase = "timing" | "playback";
 
-const ANIM_DURATION = 250;
+const ANIM_DURATION = 150;
 let _canvasPrevActiveIdx = -1;
 let _canvasActiveChangeTime = -1;
 
@@ -181,9 +181,6 @@ function drawCanvasFrame(
   const rawT = _canvasActiveChangeTime > 0 ? Math.min((now - _canvasActiveChangeTime) / ANIM_DURATION, 1) : 1;
   const t = easeOutCubic(rawT);
 
-  const highlightRGB = parseHexColor(ds.highlightColor);
-  const pastRGB = parseHexColor(ds.pastWordColor);
-
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
@@ -198,12 +195,9 @@ function drawCanvasFrame(
     const y = wordsY + row * rowGap;
     if (isActive) {
       const fontSize = WF + (WFA - WF) * t;
-      const color = lerpColor(pastRGB, highlightRGB, t);
-      const arrowOpacity = 0.85 * t;
       ctx.font = `bold ${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-      ctx.fillStyle = `rgba(${highlightRGB[0]},${highlightRGB[1]},${highlightRGB[2]},${arrowOpacity})`;
+      ctx.fillStyle = ds.highlightColor;
       ctx.fillText("▶ ", x, y);
-      ctx.fillStyle = color;
       ctx.fillText(item, x + arrowW, y);
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
