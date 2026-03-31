@@ -862,7 +862,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   // Uses the current cycle index so it stays within the active cycle.
   const jumpToWord = (wordIdx: number) => {
     const nw = localItemsLenRef.current;
-    const newTi = currentCycleIndex * nw + wordIdx;
+    const cycleIdx = nw > 0 ? Math.floor(timingIndexRef.current / nw) : 0;
+    const newTi = cycleIdx * nw + wordIdx;
     timingIndexRef.current = newTi;
     setTimingIndex(newTi);
   };
