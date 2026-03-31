@@ -1073,6 +1073,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         timingIndexRef.current = timingIdx;
         setTimestamps(loaded);
         setTimingIndex(timingIdx);
+        lastActiveRef.current = -1;
+        lastClearedIdxRef.current = null;
+        lastWordHitTimeRef.current = -1;
+        setHighlightCleared(false);
+        setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
           setLocalItems(json.words);
           localItemsLenRef.current = json.words.length;
