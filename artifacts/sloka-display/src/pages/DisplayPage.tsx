@@ -67,6 +67,7 @@ function drawCanvasFrame(
     const boxX = W / 2 - boxW / 2;
     const boxY = H / 2 - boxH / 2;
     const r = fontSize * 0.55;
+    // Draw rounded rectangle border
     ctx.beginPath();
     ctx.moveTo(boxX + r, boxY);
     ctx.lineTo(boxX + boxW - r, boxY);
@@ -83,6 +84,7 @@ function drawCanvasFrame(
     ctx.strokeStyle = "#c8a84b";
     ctx.lineWidth = Math.max(2, W * 0.004);
     ctx.stroke();
+    // Draw text inside the box
     ctx.fillStyle = ds.overlayTextColor;
     const startY = H / 2 - ((lines.length - 1) * lh) / 2;
     lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lh));
@@ -120,25 +122,18 @@ function drawCanvasFrame(
   ctx.closePath();
   ctx.fill();
 
-  const WF  = Math.max(14, Math.min(ds.previousFontSize,    38));
+  const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
   const WFA = Math.max(14, Math.min(ds.highlightedFontSize, 48));
   const ROWS = 3;
-  const wordsY = divY + 48;
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
+  const wordsY = divY + 48;
 
   const numCols = Math.ceil(ds.groupWords.length / ROWS);
 
-  // ── Fixed column layout ──────────────────────────────────────────────────
-  // Compute each column's required width by measuring the widest word at the
-  // highlighted (largest) font size so nothing gets clipped.  Then distribute
-  // columns across the full canvas width, scaling down uniformly if they
-  // would overflow.  This replaces the old DOM-fraction approach which broke
-  // whenever the preview container scrolled horizontally.
-  const colGap = Math.max(W * 0.03, 24);
+  // Measure the widest word (+ arrow) per column directly on the canvas context.
+  // measureText() is self-consistent within canvas — text renders at exactly
+  // the width it measures — so this is the most reliable layout approach.
   const colWidths: number[] = [];
-  ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-  const arrowMeasure = ctx.measureText("▶ ").width;
-
   for (let c = 0; c < numCols; c++) {
     let maxW = 0;
     for (let r = 0; r < ROWS; r++) {
@@ -147,46 +142,36 @@ function drawCanvasFrame(
       const globalIdx = ds.groupStart + i;
       const item = ds.localItems[globalIdx];
       if (!item) continue;
-      // Measure at highlighted size (arrow + word) — this is the widest the
-      // cell will ever be.
-      const w = arrowMeasure + ctx.measureText(item).width;
+      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      const w = ctx.measureText("▶ " + item).width;
       maxW = Math.max(maxW, w);
     }
-    // Also measure at normal size in case a word is wider at normal weight
-    ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-    for (let r = 0; r < ROWS; r++) {
-      const i = c * ROWS + r;
-      if (i >= ds.groupWords.length) break;
-      const globalIdx = ds.groupStart + i;
-      const item = ds.localItems[globalIdx];
-      if (!item) continue;
-      const w = ctx.measureText(item).width;
-      maxW = Math.max(maxW, w);
-    }
-    ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
     colWidths.push(maxW);
   }
 
-  const totalContentW =
-    colWidths.reduce((a, b) => a + b, 0) + colGap * Math.max(0, numCols - 1);
-  const availableW = W * 0.96;
-  const startX = W * 0.02;
-  // Scale columns down proportionally if they exceed available width
-  const scale = totalContentW > availableW ? availableW / totalContentW : 1;
+  // Scale columns proportionally if they overflow the canvas width.
+  const colGap = Math.max(W * 0.025, 20);
+  const totalContent = colWidths.reduce((a, b) => a + b, 0) + colGap * (numCols - 1);
+  const scale = totalContent > W * 0.96 ? (W * 0.96) / totalContent : 1;
 
+  const startX2 = W * 0.025;
   const rColX: number[] = [];
-  let cx = startX;
+  let cx = startX2;
   for (let c = 0; c < numCols; c++) {
     rColX.push(cx);
     cx += (colWidths[c] + colGap) * scale;
   }
-  // ── End fixed column layout ───────────────────────────────────────────────
+
+  // Arrow width for drawing the active-word marker.
+  ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+  const arrowW = ctx.measureText("▶ ").width;
+
+  const SAFE_RIGHT = W * 0.02; // right-edge safety margin — skip words that start too close to edge
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   const numWordsInCanvas = ds.localItems.length;
   const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : -1;
-
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
@@ -197,14 +182,13 @@ function drawCanvasFrame(
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
     const x = rColX[col];
+    if (x > W - SAFE_RIGHT) continue; // column starts outside safe area — skip
     const y = wordsY + row * rowGap;
     if (isActive) {
       ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
-      // Re-measure arrow at current font just in case scale changed
-      const aw = ctx.measureText("▶ ").width;
       ctx.fillText("▶ ", x, y);
-      ctx.fillText(item, x + aw, y);
+      ctx.fillText(item, x + arrowW, y);
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.pastWordColor;
@@ -310,12 +294,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { localItemsLenRef.current = localItems.length; }, [localItems.length]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
-
+  // NOTE: timestampsRef is kept in sync manually inside each function that updates it.
+  // Do NOT add a useEffect to sync state→ref here — that causes stale overwrites because
+  // React processes old setTimestamps calls after newer direct ref writes.
   useEffect(() => {
-    // colXFractions is kept for reference but canvas no longer uses DOM fractions.
-    // The canvas drawCanvasFrame now computes column positions independently via
-    // ctx.measureText, so columns always fit within the canvas regardless of
-    // how many columns exist or whether the preview container is scrolled.
+    // Measure actual rendered column positions from DOM so the canvas layout
+    // exactly matches the HTML preview — bypassing ctx.measureText() which
+    // is inaccurate for complex scripts like Telugu.
     let colXFractions: number[] = [];
     const container = wordColsContainerRef.current;
     if (container) {
@@ -372,6 +357,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         const next = [...timestampsRef.current];
         const startIdx = timingIndexRef.current;
         const nw = localItemsLenRef.current;
+        // Don't fill unmarked positions — partial cycles are allowed.
+        // Just advance timingIndex to the cycle boundary so the next cycle can start.
         const cycleEnd = nw > 0 ? (Math.floor(startIdx / nw) + 1) * nw : startIdx;
         timestampsRef.current = next;
         timingIndexRef.current = cycleEnd;
@@ -414,17 +401,23 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       }
     }
     if (active !== lastActiveRef.current) {
+      // If the incoming active word is the one we intentionally cleared, just
+      // silently re-sync lastActiveRef so the tick stays quiet — do NOT restore
+      // the highlight or cancel the cleared state.
       if (active === lastClearedIdxRef.current) {
         lastActiveRef.current = active;
       } else {
+        // Genuinely different word — clear any intentional-clear flag and restore.
         lastClearedIdxRef.current = null;
         lastActiveRef.current = active;
         lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
         setCurrentIndex(active);
+        // If this is the last word, start the 5-second clear.
         const lastValidIdx = ts.reduce<number>((acc, v, i) => v != null ? i : acc, -1);
         if (active >= 0 && active === lastValidIdx) {
           lastWordHitTimeRef.current = performance.now();
+          // Fallback setTimeout in case the RAF stops (audio ends) before 5s.
           if (lastWordClearTimerRef.current) clearTimeout(lastWordClearTimerRef.current);
           lastWordClearTimerRef.current = setTimeout(() => {
             lastWordClearTimerRef.current = null;
@@ -438,6 +431,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       }
     }
 
+    // Every frame: check if 5 seconds have passed since the last word was highlighted.
     if (
       lastWordHitTimeRef.current > 0 &&
       !displayStateRef.current.highlightCleared &&
@@ -450,10 +444,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setHighlightCleared(true);
     }
 
+    // Compute display group every frame for smooth group transitions.
+    // groupTransitionTimes is a flat sorted list of absolute audio times — no
+    // per-cycle indexing. A time fires when it falls within the current
+    // repetition's window [repStart, ahead].
     const nw = localItemsLenRef.current;
     const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
     const numGroups = numGroupsRef.current;
     const numTrans = Math.max(0, numGroups - 1);
+    // Find the earliest timestamp in the current cycle (= repetition start).
     let repStart = -Infinity;
     if (nw > 0) {
       const base = cycleIdx * nw;
@@ -463,7 +462,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           repStart = wt as number;
       }
     }
+    // Per-transition keyed map of absolute audio times.
     const perTransTimes = groupTransitionTimesRef.current ?? {};
+    // Word-boundary group (always computed as floor).
     let wbGroup = 0;
     if (active >= 0) {
       const wi = nw > 0 ? active % nw : active;
@@ -472,6 +473,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (wi >= gsi[i]) { wbGroup = i; break; }
       }
     }
+    // Transition-triggered group: each transIdx checked independently.
     let transGroup = 0;
     if (numTrans > 0 && repStart > -Infinity) {
       for (let tr = 0; tr < numTrans; tr++) {
@@ -500,6 +502,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   }, [timingIndex]);
 
   useEffect(() => {
+    // Auto-navigate to preview only after the first cycle AND all words were marked.
+    // Partial cycles or multi-cycle use: user clicks Done manually.
     if (audioEndedInTimingRef.current && timingIndex === localItems.length) {
       const ts = timestampsRef.current;
       const allMarked = localItems.length > 0 &&
@@ -529,6 +533,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       URL.revokeObjectURL(url);
     }
   }, [recordedBlob]);
+
 
   const toggleAudio = () => {
     const audio = audioRef.current;
@@ -585,6 +590,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const t = Math.max(0, audio.currentTime - 1);
     const next = [...timestampsRef.current];
     next[idx] = t;
+    // Advance past already-marked positions but stay within the current cycle
     const cycleEnd = (Math.floor(idx / numWords) + 1) * numWords;
     let nextIdx = idx + 1;
     while (nextIdx < cycleEnd && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
@@ -655,6 +661,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
     lastActiveRef.current = active;
     setCurrentIndex(active);
+    // Compute display group — same repStart-window logic as tick.
     const nw = localItems.length;
     const cycleIdx = (nw > 0 && active >= 0) ? Math.floor(active / nw) : 0;
     const numTrans = Math.max(0, groups.length - 1);
@@ -712,6 +719,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const curCycleIndex = Math.floor(curTi / nw);
     const curCycleOffset = curCycleIndex * nw;
     const ts = timestampsRef.current;
+    // If this group already has any marks in the current cycle → start a NEW cycle
     const hasMarks = ts.slice(curCycleOffset + gStart, curCycleOffset + gEnd)
       .some(t => t !== undefined && t !== null);
     const targetCycleOffset = hasMarks ? (curCycleIndex + 1) * nw : curCycleOffset;
@@ -747,6 +755,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setIsPlaying(false);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     audioEndedInTimingRef.current = false;
+    // Preserve timestamps outside this group; clear only within it
     const existing = [...timestampsRef.current];
     while (existing.length < groupEndIdx) existing.push(undefined as unknown as number);
     for (let i = startIdx; i < groupEndIdx; i++) {
@@ -764,6 +773,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setRetimeMenuGroup(null);
   };
 
+  // groupTransitionTimes is a per-transition-index map: Record<transIdx, number[]>.
+  // Each entry between sections (transIdx 0 = between section 1 and 2, etc.) has
+  // its own independent list of absolute audio times.
   const markGroupTransition = (transIdx: number) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -805,6 +817,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   };
 
+  // Seek audio to a specific time (used by clickable timestamp chips).
   const seekToTime = (t: number) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -812,6 +825,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setAudioCurrentTime(t);
   };
 
+  // Move the timing cursor to a specific word so it can be re-marked.
+  // Uses the current cycle index so it stays within the active cycle.
   const jumpToWord = (wordIdx: number) => {
     const nw = localItemsLenRef.current;
     const newTi = currentCycleIndex * nw + wordIdx;
@@ -886,6 +901,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const startRecording = async () => {
     try {
+      // Wait for all fonts (including Telugu) to finish loading before
+      // measuring or rendering — prevents layout shift on first frames.
+      await document.fonts.ready;
+
       const canvas = canvasRef.current;
       if (!canvas) { alert("Canvas not ready. Please try again."); return; }
 
@@ -1039,9 +1058,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         }
         if (json.groupTransitionTimes) {
           if (Array.isArray(json.groupTransitionTimes)) {
+            // Old format: flat array — can't reliably split per transIdx, so discard.
             groupTransitionTimesRef.current = {};
             setGroupTransitionTimes({});
           } else if (typeof json.groupTransitionTimes === "object") {
+            // New format: Record<number, number[]>
             const loaded2: Record<number, number[]> = {};
             for (const key of Object.keys(json.groupTransitionTimes)) {
               const times = json.groupTransitionTimes[key];
@@ -1091,10 +1112,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   if (phase === "timing") {
     const numWords = localItems.length;
+    // currentCycleIndex: which cycle are we in right now (0-based)
+    // timingIndex=0 → cycle 0 (word 0), timingIndex=46 → cycle 1 (word 0), etc.
     const currentCycleIndex = numWords === 0 ? 0 : Math.floor(timingIndex / numWords);
     const currentCycleOffset = currentCycleIndex * numWords;
-    const cycleTimingIndex = timingIndex - currentCycleOffset;
+    const cycleTimingIndex = timingIndex - currentCycleOffset; // 0..numWords-1
     const numCycles = currentCycleIndex + 1;
+    // cycleComplete = we just finished a cycle and are sitting at the start of the next one
     const cycleComplete = cycleTimingIndex === 0 && timingIndex > 0;
 
     const timingGroup = getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
@@ -1320,6 +1344,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     <div key={groupIdx}>
                       {groupIdx > 0 && groups.length > 1 && (() => {
                         const transIdx = groupIdx - 1;
+                        // Per-transition times — only show chips for this specific transIdx.
                         const transChips = (groupTransitionTimes[transIdx] ?? []) as number[];
                         const isUnmarked = transChips.length === 0;
                         return (
@@ -1332,12 +1357,25 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                             {transChips.map((t) => (
                               <span key={String(t)}
                                 className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
-                                style={{ background: "#f0fdf4", borderColor: "#86efac", color: "#15803d" }}
+                                style={{
+                                  background: "#f0fdf4",
+                                  borderColor: "#86efac",
+                                  color: "#15803d",
+                                }}
                               >
-                                <button onClick={() => seekToTime(t)} className="hover:underline focus:outline-none" title="Seek to this display switch time" style={{ color: "inherit" }}>
+                                <button
+                                  onClick={() => seekToTime(t)}
+                                  className="hover:underline focus:outline-none"
+                                  title="Seek to this display switch time"
+                                  style={{ color: "inherit" }}
+                                >
                                   {formatTime(t)}
                                 </button>
-                                <button onClick={() => removeGroupTransition(transIdx, t)} className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all" title="Remove this display switch time">
+                                <button
+                                  onClick={() => removeGroupTransition(transIdx, t)}
+                                  className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
+                                  title="Remove this display switch time"
+                                >
                                   <X className="w-2.5 h-2.5" />
                                 </button>
                               </span>
@@ -1369,12 +1407,27 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           retimeMenuGroup === groupIdx ? (
                             <div className="flex items-center gap-1">
                               <span className="text-xs text-gray-400 mr-1">Re-time:</span>
-                              <button onClick={() => retimeFromGroup(groupIdx, true)} className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-0.5 rounded transition-colors">Reset audio</button>
-                              <button onClick={() => retimeFromGroup(groupIdx, false)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-0.5 rounded transition-colors">Keep position</button>
-                              <button onClick={() => setRetimeMenuGroup(null)} className="text-gray-300 hover:text-gray-500 ml-1"><X className="w-3 h-3" /></button>
+                              <button
+                                onClick={() => retimeFromGroup(groupIdx, true)}
+                                className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-0.5 rounded transition-colors"
+                              >
+                                Reset audio
+                              </button>
+                              <button
+                                onClick={() => retimeFromGroup(groupIdx, false)}
+                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-0.5 rounded transition-colors"
+                              >
+                                Keep position
+                              </button>
+                              <button onClick={() => setRetimeMenuGroup(null)} className="text-gray-300 hover:text-gray-500 ml-1">
+                                <X className="w-3 h-3" />
+                              </button>
                             </div>
                           ) : (
-                            <button onClick={() => setRetimeMenuGroup(groupIdx)} className="text-xs text-gray-400 hover:text-amber-600 flex items-center gap-1 transition-colors">
+                            <button
+                              onClick={() => setRetimeMenuGroup(groupIdx)}
+                              className="text-xs text-gray-400 hover:text-amber-600 flex items-center gap-1 transition-colors"
+                            >
                               <RotateCcw className="w-3 h-3" /> Re-time from here
                             </button>
                           )
@@ -1423,8 +1476,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                         if (e.key === "Escape") { e.stopPropagation(); cancelEdit(); }
                                       }}
                                     />
-                                    <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5"><Check className="w-4 h-4" /></button>
-                                    <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5"><X className="w-4 h-4" /></button>
+                                    <button onClick={confirmEdit} className="text-green-600 hover:text-green-700 p-0.5">
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600 p-0.5">
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1464,10 +1521,19 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                         color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
                                       }}
                                     >
-                                      <button onClick={() => seekToTime(t)} className="hover:underline focus:outline-none" title={`Seek to Cycle ${cycleIdx + 1} timestamp`} style={{ color: "inherit" }}>
+                                      <button
+                                        onClick={() => seekToTime(t)}
+                                        className="hover:underline focus:outline-none"
+                                        title={`Seek to Cycle ${cycleIdx + 1} timestamp`}
+                                        style={{ color: "inherit" }}
+                                      >
                                         C{cycleIdx + 1}: {formatTime(t)}
                                       </button>
-                                      <button onClick={() => removeTimestamp(cycleIdx, i)} className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all" title={`Remove Cycle ${cycleIdx + 1} timestamp`}>
+                                      <button
+                                        onClick={() => removeTimestamp(cycleIdx, i)}
+                                        className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
+                                        title={`Remove Cycle ${cycleIdx + 1} timestamp`}
+                                      >
                                         <X className="w-2.5 h-2.5" />
                                       </button>
                                     </span>
@@ -1494,10 +1560,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       </div>
     );
   }
-
-  // ── Playback phase ────────────────────────────────────────────────────────
-  const numWords = localItems.length;
-  const currentCycleIndex = numWords === 0 ? 0 : Math.floor(timingIndex / numWords);
 
   const displayGroupLines = groups[displayGroup]?.lines ?? [];
   const displayGroupWords = groups[displayGroup]?.words ?? [];
@@ -1539,7 +1601,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button onClick={toggleAudio} variant="ghost" size="sm" className="text-amber-700 hover:text-amber-800">
+            <Button onClick={toggleAudio} variant="ghost" size="sm"
+              className="text-amber-700 hover:text-amber-800">
               {isPlaying ? <><Pause className="w-4 h-4 mr-1" /></> : <><Play className="w-4 h-4 mr-1" /></>}
               <span className="text-xs">{isPlaying ? "Pause" : "Play Preview"}</span>
             </Button>

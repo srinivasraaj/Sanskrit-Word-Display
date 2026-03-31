@@ -1,0 +1,97 @@
+🧩 STEP 1 — Remove incorrect canvas width calculation
+🔍 Find this block inside drawCanvasFrame:
+const colWidths: number[] = [];
+...
+const totalContent = ...
+const scale = ...
+const rColX: number[] = [];
+❌ DELETE ALL of this:
+colWidths loop
+totalContent
+scale
+manual rColX calculation
+
+👉 Reason: ctx.measureText() is inaccurate for Telugu → causes clipping
+
+🧩 STEP 2 — Use DOM-based column positions (CRITICAL FIX)
+🔍 Find where you already compute:
+colXFractions
+✅ In drawCanvasFrame, replace column X logic with:
+const colXFractions = ds.colXFractions || [];
+const rColX = colXFractions.map(f => f * W);
+🧩 STEP 3 — Ensure DOM positions are captured correctly
+🔍 Find this useEffect:
+useEffect(() => {
+  let colXFractions: number[] = [];
+✅ Make sure it includes:
+const container = wordColsContainerRef.current;
+
+if (container) {
+  const containerRect = container.getBoundingClientRect();
+  const cw = containerRect.width;
+
+  if (cw > 0) {
+    colXFractions = colDivRefs.current
+      .filter(Boolean)
+      .map(el =>
+        (el.getBoundingClientRect().left - containerRect.left) / cw
+      );
+  }
+}
+✅ And store it:
+displayStateRef.current = {
+  ...displayStateRef.current,
+  colXFractions,
+};
+🧩 STEP 4 — Fix canvas DPI (VERY IMPORTANT)
+🔍 At top of drawCanvasFrame, AFTER getting context:
+const ctx = canvas.getContext("2d");
+✅ Add:
+const dpr = window.devicePixelRatio || 1;
+
+if (canvas.width !== canvas.clientWidth * dpr) {
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.scale(dpr, dpr);
+}
+
+👉 Fixes:
+
+blurry text
+subtle layout mismatch
+clipping during recording
+🧩 STEP 5 — Add right-side safety padding
+🔍 Before drawing text:
+const SAFE_RIGHT = W * 0.02;
+Optional safety check:
+if (x > W - SAFE_RIGHT) return;
+🧩 STEP 6 — Keep arrow width but don’t rely on it for layout
+
+This is fine:
+
+const arrowW = ctx.measureText("▶ ").width;
+
+👉 It’s small and safe (problem was large text measurement)
+
+🧩 STEP 7 — DO NOT scale columns anymore
+❌ Remove any code like:
+const scale = ...
+cx += (colWidths[c] + colGap) * scale;
+
+👉 This is the main reason last column gets cut
+
+🧩 STEP 8 — Add small canvas margin (MediaRecorder fix)
+
+At background fill:
+
+ctx.fillRect(0, 0, W - 10, H);
+
+👉 Prevents browser encoding edge crop
+
+🧩 STEP 9 — Ensure fonts are loaded before recording
+
+Before recording starts:
+
+await document.fonts.ready;
+
+👉 Prevents layout shift during export
