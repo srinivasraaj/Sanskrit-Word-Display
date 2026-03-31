@@ -18,7 +18,7 @@ interface DisplayPageProps {
 
 type Phase = "timing" | "playback";
 
-const ANIM_DURATION = 150;
+const ANIM_DURATION = 250;
 let _canvasPrevActiveIdx = -1;
 let _canvasActiveChangeTime = -1;
 
