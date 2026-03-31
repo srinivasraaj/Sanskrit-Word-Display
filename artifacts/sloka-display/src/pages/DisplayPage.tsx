@@ -143,6 +143,23 @@ function drawCanvasFrame(
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   const arrowW = ctx.measureText("▶ ").width;
 
+  // DEBUG: draw column markers so positions are visible in the exported frame
+  ctx.save();
+  ctx.font = `bold 14px monospace`;
+  ctx.textBaseline = "top";
+  rColX.forEach((x, c) => {
+    ctx.strokeStyle = c % 2 === 0 ? "red" : "blue";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, wordsY - 20); ctx.lineTo(x, H - 20); ctx.stroke();
+    ctx.fillStyle = c % 2 === 0 ? "red" : "blue";
+    ctx.textAlign = "left";
+    ctx.fillText(`C${c}: x=${Math.round(x)}px frac=${fractions[c].toFixed(3)}`, x + 3, wordsY - 18);
+  });
+  ctx.fillStyle = "#333";
+  ctx.textAlign = "left";
+  ctx.fillText(`Canvas: ${W}×${H}  fracs:[${fractions.map(f=>f.toFixed(3)).join(",")}]`, 4, H - 18);
+  ctx.restore();
+
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   const numWordsInCanvas = ds.localItems.length;
