@@ -129,14 +129,27 @@ function drawCanvasFrame(
   const wordsY = divY + 48;
 
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-  let maxW = 60;
+  const numCols = Math.ceil(ds.groupWords.length / ROWS);
+  // Measure max width per column individually (matches HTML flex layout per-column sizing)
+  const arrowW = ctx.measureText("▶ ").width;
+  const colWidths: number[] = Array(numCols).fill(0);
   ds.groupWords.forEach((_, i) => {
     const item = ds.localItems[ds.groupStart + i];
-    if (item) maxW = Math.max(maxW, ctx.measureText(item).width);
+    if (!item) return;
+    const col = Math.floor(i / ROWS);
+    const w = ctx.measureText(item).width + arrowW;
+    if (w > colWidths[col]) colWidths[col] = w;
   });
-  const numCols = Math.ceil(ds.groupWords.length / ROWS);
-  const usableW = W - 2 * startX;
-  const colGap = numCols <= 1 ? maxW + 64 : Math.min(maxW + 64, usableW / numCols);
+  // Compute cumulative X start for each column with a fixed inter-column gap
+  const COL_GAP = Math.round(W * 0.025); // ~32px for 1280px canvas, matches gap-8 in HTML
+  const colX: number[] = [startX];
+  for (let c = 1; c < numCols; c++) {
+    colX[c] = colX[c - 1] + colWidths[c - 1] + COL_GAP;
+  }
+  // If total layout overflows the canvas, scale everything down proportionally
+  const totalEnd = colX[numCols - 1] + colWidths[numCols - 1];
+  const maxEnd = W - startX;
+  const scale = totalEnd > maxEnd ? maxEnd / totalEnd : 1;
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
@@ -151,7 +164,7 @@ function drawCanvasFrame(
     if (!isActive && !isPast) return;
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
-    const x = startX + col * colGap;
+    const x = colX[col] * scale;
     const y = wordsY + row * rowGap;
     if (isActive) {
       ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
