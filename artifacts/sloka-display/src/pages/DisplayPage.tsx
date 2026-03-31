@@ -125,40 +125,46 @@ function drawCanvasFrame(
   const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
   const WFA = Math.max(14, Math.min(ds.highlightedFontSize, 48));
   const ROWS = 3;
-  const startX = W * 0.025;
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
   const wordsY = divY + 48;
 
   const numCols = Math.ceil(ds.groupWords.length / ROWS);
 
-  // Use DOM-measured column fractions (set from actual HTML preview layout) so
-  // canvas column positions exactly mirror the browser's text rendering.
-  // Falls back to equal slots if DOM fractions aren't available yet.
-  const fractions = ds.colXFractions.length >= numCols
-    ? ds.colXFractions.slice(0, numCols)
-    : Array.from({ length: numCols }, (_, c) => c / numCols);
-  const rColX = fractions.map((f) => f * W);
+  // Measure the widest word (+ arrow) per column directly on the canvas context.
+  // measureText() is self-consistent within canvas — text renders at exactly
+  // the width it measures — so this is the most reliable layout approach.
+  const colWidths: number[] = [];
+  for (let c = 0; c < numCols; c++) {
+    let maxW = 0;
+    for (let r = 0; r < ROWS; r++) {
+      const i = c * ROWS + r;
+      if (i >= ds.groupWords.length) break;
+      const globalIdx = ds.groupStart + i;
+      const item = ds.localItems[globalIdx];
+      if (!item) continue;
+      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      const w = ctx.measureText("▶ " + item).width;
+      maxW = Math.max(maxW, w);
+    }
+    colWidths.push(maxW);
+  }
 
-  // Arrow width — only needed for the active word; measure at active font.
+  // Scale columns proportionally if they overflow the canvas width.
+  const colGap = Math.max(W * 0.025, 20);
+  const totalContent = colWidths.reduce((a, b) => a + b, 0) + colGap * (numCols - 1);
+  const scale = totalContent > W * 0.96 ? (W * 0.96) / totalContent : 1;
+
+  const startX2 = W * 0.025;
+  const rColX: number[] = [];
+  let cx = startX2;
+  for (let c = 0; c < numCols; c++) {
+    rColX.push(cx);
+    cx += (colWidths[c] + colGap) * scale;
+  }
+
+  // Arrow width for drawing the active-word marker.
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   const arrowW = ctx.measureText("▶ ").width;
-
-  // DEBUG: draw column markers so positions are visible in the exported frame
-  ctx.save();
-  ctx.font = `bold 14px monospace`;
-  ctx.textBaseline = "top";
-  rColX.forEach((x, c) => {
-    ctx.strokeStyle = c % 2 === 0 ? "red" : "blue";
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x, wordsY - 20); ctx.lineTo(x, H - 20); ctx.stroke();
-    ctx.fillStyle = c % 2 === 0 ? "red" : "blue";
-    ctx.textAlign = "left";
-    ctx.fillText(`C${c}: x=${Math.round(x)}px frac=${fractions[c].toFixed(3)}`, x + 3, wordsY - 18);
-  });
-  ctx.fillStyle = "#333";
-  ctx.textAlign = "left";
-  ctx.fillText(`Canvas: ${W}×${H}  fracs:[${fractions.map(f=>f.toFixed(3)).join(",")}]`, 4, H - 18);
-  ctx.restore();
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";

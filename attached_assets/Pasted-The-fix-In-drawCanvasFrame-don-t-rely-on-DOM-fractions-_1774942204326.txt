@@ -1,0 +1,41 @@
+The fix: In drawCanvasFrame, don't rely on DOM fractions for column layout. Instead, compute column positions purely from the canvas width using equal spacing — or better, measure the actual text widths on canvas to auto-fit columns.
+Here's the corrected column layout logic for drawCanvasFrame:
+typescript// Replace the rColX calculation block in drawCanvasFrame:
+
+const ROWS = 3;
+const numCols = Math.ceil(ds.groupWords.length / ROWS);
+
+// Compute column widths by measuring the widest word in each column on-canvas.
+// This is reliable because we control the font exactly here.
+const colWidths: number[] = [];
+for (let c = 0; c < numCols; c++) {
+  let maxW = 0;
+  for (let r = 0; r < ROWS; r++) {
+    const i = c * ROWS + r;
+    if (i >= ds.groupWords.length) break;
+    const globalIdx = ds.groupStart + i;
+    const item = ds.localItems[globalIdx];
+    if (!item) continue;
+    // Measure at the larger (highlighted) font size so the column is wide enough
+    ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+    const w = ctx.measureText("▶ " + item).width;
+    maxW = Math.max(maxW, w);
+  }
+  colWidths.push(maxW);
+}
+
+// Compute total content width and scale columns to fit within canvas
+const colGap = Math.max(W * 0.025, 20);
+const totalContent = colWidths.reduce((a, b) => a + b, 0) + colGap * (numCols - 1);
+const scale = totalContent > W * 0.96 ? (W * 0.96) / totalContent : 1;
+
+const startX = W * 0.025;
+const rColX: number[] = [];
+let cx = startX;
+for (let c = 0; c < numCols; c++) {
+  rColX.push(cx);
+  cx += (colWidths[c] + colGap) * scale;
+}
+Also remove the debug column marker drawing block (the ctx.save() block that draws red/blue lines and text) — that was debug code that shouldn't be in the final export either.
+The key insight: the HTML preview can scroll horizontally (revealing cut-off columns by scrolling), but the canvas cannot. By computing column positions directly on the canvas using ctx.measureText, every column is guaranteed to fit within the 1280px width — and since you're measuring at the highlighted font size (the largest), columns will never be too narrow either.
+One additional safety measure — in startRecording, set the canvas to a wider aspect if needed, or ensure columns wrap. But the above fix should handle dynamic column counts correctly since it scales everything proportionall
