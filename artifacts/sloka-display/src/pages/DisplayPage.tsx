@@ -169,7 +169,6 @@ function drawCanvasFrame(
     if (isActive) {
       ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
-      const arrowW = ctx.measureText("▶ ").width;
       ctx.fillText("▶ ", x, y);
       ctx.fillText(item, x + arrowW, y);
     } else {
