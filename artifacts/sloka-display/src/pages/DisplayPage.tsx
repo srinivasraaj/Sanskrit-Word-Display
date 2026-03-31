@@ -124,7 +124,7 @@ function drawCanvasFrame(
   const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
   const WFA = Math.max(14, Math.min(ds.highlightedFontSize, 48));
   const ROWS = 3;
-  const startX = W * 0.1;
+  const startX = W * 0.025;
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
   const wordsY = divY + 48;
 
@@ -134,7 +134,9 @@ function drawCanvasFrame(
     const item = ds.localItems[ds.groupStart + i];
     if (item) maxW = Math.max(maxW, ctx.measureText(item).width);
   });
-  const colGap = maxW + 64;
+  const numCols = Math.ceil(ds.groupWords.length / ROWS);
+  const usableW = W - 2 * startX;
+  const colGap = numCols <= 1 ? maxW + 64 : Math.min(maxW + 64, usableW / numCols);
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
