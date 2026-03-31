@@ -1041,13 +1041,24 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     e.target.value = "";
   };
 
+  const fmtTs = (s: number | null | undefined): string | null => {
+    if (s == null) return null;
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toFixed(1).padStart(4, "0");
+    return `${m}:${sec}`;
+  };
+
   const downloadMarkers = () => {
+    const fmtGroupTransitionTimes: Record<string, (string | null)[]> = {};
+    for (const key of Object.keys(groupTransitionTimes)) {
+      fmtGroupTransitionTimes[key] = groupTransitionTimes[Number(key)].map(fmtTs);
+    }
     const payload = {
       words: localItems,
-      timestamps,
-      groupTransitionTimes,
-      overlays,
-      audioDuration: audioRef.current?.duration ?? null,
+      timestamps: timestamps.map(fmtTs),
+      groupTransitionTimes: fmtGroupTransitionTimes,
+      overlays: overlays.map(ov => ({ ...ov, startTime: fmtTs(ov.startTime), duration: fmtTs(ov.duration) })),
+      audioDuration: fmtTs(audioRef.current?.duration ?? null),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1066,7 +1077,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       try {
         const json = JSON.parse(ev.target?.result as string);
         if (!Array.isArray(json.timestamps)) throw new Error("Invalid format");
-        const loaded: number[] = json.timestamps;
+        const parseTs = (v: unknown): number | null => {
+          if (v == null) return null;
+          if (typeof v === "number") return v;
+          if (typeof v === "string") {
+            const parts = v.match(/^(\d+):(\d+(?:\.\d+)?)$/);
+            if (parts) return Number(parts[1]) * 60 + Number(parts[2]);
+          }
+          return null;
+        };
+        const loaded: number[] = json.timestamps.map((t: unknown) => parseTs(t)!);
         const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
         const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
         timestampsRef.current = loaded;
@@ -1083,21 +1103,24 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           localItemsLenRef.current = json.words.length;
         }
         if (json.overlays && Array.isArray(json.overlays)) {
-          setOverlays(json.overlays);
+          setOverlays(json.overlays.map((ov: any) => ({
+            ...ov,
+            startTime: typeof ov.startTime === "string" ? parseTs(ov.startTime)! : ov.startTime,
+            duration: typeof ov.duration === "string" ? parseTs(ov.duration)! : ov.duration,
+          })));
         }
         if (json.groupTransitionTimes) {
           if (Array.isArray(json.groupTransitionTimes)) {
-            // Old format: flat array — can't reliably split per transIdx, so discard.
             groupTransitionTimesRef.current = {};
             setGroupTransitionTimes({});
           } else if (typeof json.groupTransitionTimes === "object") {
-            // New format: Record<number, number[]>
             const loaded2: Record<number, number[]> = {};
             for (const key of Object.keys(json.groupTransitionTimes)) {
               const times = json.groupTransitionTimes[key];
               if (Array.isArray(times)) {
-                loaded2[Number(key)] = (times as (number | null | undefined)[])
-                  .filter(x => x != null) as number[];
+                loaded2[Number(key)] = (times as unknown[])
+                  .map(parseTs)
+                  .filter((x): x is number => x != null);
                 loaded2[Number(key)].sort((a, b) => a - b);
               }
             }
@@ -1106,15 +1129,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           }
         }
         const audioDur = audioRef.current?.duration ?? 0;
-        const savedDur: number | null = json.audioDuration ?? null;
+        const savedDurRaw = json.audioDuration ?? null;
+        const savedDur: number | null = savedDurRaw != null ? (parseTs(savedDurRaw) ?? null) : null;
         if (loaded.length > 0) {
-          const maxTs = Math.max(...loaded);
+          const validLoaded = loaded.filter((t): t is number => t != null);
+          const maxTs = validLoaded.length > 0 ? Math.max(...validLoaded) : 0;
           if (audioDur > 0 && maxTs > audioDur) {
             alert(
               `Warning: This markers file has timestamps up to ${(maxTs / 60).toFixed(1)} min, ` +
               `but the loaded audio is only ${(audioDur / 60).toFixed(1)} min long.\n\n` +
               `These markers were saved with a different audio file. ` +
-              `The ${loaded.filter((t) => t > audioDur).length} affected word(s) will not highlight during playback — please re-mark them.`
+              `The ${validLoaded.filter((t) => t > audioDur).length} affected word(s) will not highlight during playback — please re-mark them.`
             );
           } else if (audioDur === 0 && savedDur !== null) {
             alert(
