@@ -18,6 +18,29 @@ interface DisplayPageProps {
 
 type Phase = "timing" | "playback";
 
+const ANIM_DURATION = 250;
+let _canvasPrevActiveIdx = -1;
+let _canvasActiveChangeTime = -1;
+
+function parseHexColor(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) || 0;
+  const g = parseInt(h.substring(2, 4), 16) || 0;
+  const b = parseInt(h.substring(4, 6), 16) || 0;
+  return [r, g, b];
+}
+
+function lerpColor(c1: [number, number, number], c2: [number, number, number], t: number): string {
+  const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+  const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+  const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+  return `rgb(${r},${g},${b})`;
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 function drawCanvasFrame(
   canvas: HTMLCanvasElement | null,
   activeIdx: number,
@@ -142,12 +165,25 @@ function drawCanvasFrame(
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   const arrowW = ctx.measureText("▶ ").width;
 
-  const SAFE_RIGHT = W * 0.02; // right-edge safety margin — skip words that start too close to edge
+  const SAFE_RIGHT = W * 0.02;
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   const numWordsInCanvas = ds.localItems.length;
   const activeWordIdx = numWordsInCanvas > 0 && activeIdx >= 0 ? activeIdx % numWordsInCanvas : -1;
+
+  const now = performance.now();
+  if (activeWordIdx !== _canvasPrevActiveIdx) {
+    _canvasActiveChangeTime = now;
+    _canvasPrevActiveIdx = activeWordIdx;
+  }
+
+  const rawT = _canvasActiveChangeTime > 0 ? Math.min((now - _canvasActiveChangeTime) / ANIM_DURATION, 1) : 1;
+  const t = easeOutCubic(rawT);
+
+  const highlightRGB = parseHexColor(ds.highlightColor);
+  const pastRGB = parseHexColor(ds.pastWordColor);
+
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
@@ -158,12 +194,16 @@ function drawCanvasFrame(
     const col = Math.floor(i / ROWS);
     const row = i % ROWS;
     const x = rColX[col];
-    if (x > W - SAFE_RIGHT) continue; // column starts outside safe area — skip
+    if (x > W - SAFE_RIGHT) continue;
     const y = wordsY + row * rowGap;
     if (isActive) {
-      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-      ctx.fillStyle = ds.highlightColor;
+      const fontSize = WF + (WFA - WF) * t;
+      const color = lerpColor(pastRGB, highlightRGB, t);
+      const arrowOpacity = 0.85 * t;
+      ctx.font = `bold ${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.fillStyle = `rgba(${highlightRGB[0]},${highlightRGB[1]},${highlightRGB[2]},${arrowOpacity})`;
       ctx.fillText("▶ ", x, y);
+      ctx.fillStyle = color;
       ctx.fillText(item, x + arrowW, y);
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
