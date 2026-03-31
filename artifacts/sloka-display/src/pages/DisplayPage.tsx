@@ -287,6 +287,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
   const [overlays, setOverlays] = useState<OverlayMarker[]>([]);
   const [addingOverlay, setAddingOverlay] = useState(false);
+  const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
   const [pendingOverlayTime, setPendingOverlayTime] = useState(0);
   const [newOverlayText, setNewOverlayText] = useState("");
   const [newOverlayDuration, setNewOverlayDuration] = useState(3);
@@ -1034,19 +1035,39 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setNewOverlayDuration(3);
     setNewOverlayImageDataUrl("");
     setNewOverlayImageName("");
+    setEditingOverlayId(null);
+    setAddingOverlay(true);
+  };
+
+  const editOverlay = (ov: OverlayMarker) => {
+    setPendingOverlayTime(ov.startTime);
+    setNewOverlayText(ov.text || "");
+    setNewOverlayDuration(ov.duration);
+    setNewOverlayImageDataUrl(ov.imageDataUrl || "");
+    setNewOverlayImageName(ov.imageDataUrl ? "Current image" : "");
+    setEditingOverlayId(ov.id);
     setAddingOverlay(true);
   };
 
   const saveOverlay = () => {
     if (!newOverlayText.trim() && !newOverlayImageDataUrl) return;
-    const marker: OverlayMarker = {
-      id: `ov-${Date.now()}`,
-      startTime: pendingOverlayTime,
-      duration: newOverlayDuration,
-      text: newOverlayText.trim(),
-      imageDataUrl: newOverlayImageDataUrl,
-    };
-    setOverlays((prev) => [...prev, marker].sort((a, b) => a.startTime - b.startTime));
+    if (editingOverlayId) {
+      setOverlays((prev) => prev.map((o) =>
+        o.id === editingOverlayId
+          ? { ...o, startTime: pendingOverlayTime, duration: newOverlayDuration, text: newOverlayText.trim(), imageDataUrl: newOverlayImageDataUrl }
+          : o
+      ).sort((a, b) => a.startTime - b.startTime));
+    } else {
+      const marker: OverlayMarker = {
+        id: `ov-${Date.now()}`,
+        startTime: pendingOverlayTime,
+        duration: newOverlayDuration,
+        text: newOverlayText.trim(),
+        imageDataUrl: newOverlayImageDataUrl,
+      };
+      setOverlays((prev) => [...prev, marker].sort((a, b) => a.startTime - b.startTime));
+    }
+    setEditingOverlayId(null);
     setAddingOverlay(false);
   };
 
@@ -1338,11 +1359,23 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-purple-700 text-xs font-semibold flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5" /> Add Overlay at {formatTime(pendingOverlayTime)}
+                      <Layers className="w-3.5 h-3.5" /> {editingOverlayId ? "Edit" : "Add"} Overlay
                     </span>
-                    <button onClick={() => setAddingOverlay(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    <button onClick={() => { setAddingOverlay(false); setEditingOverlayId(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
                   </div>
                   <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">At</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={Math.round(pendingOverlayTime * 10) / 10}
+                        onChange={(e) => setPendingOverlayTime(Math.max(0, Number(e.target.value)))}
+                        className="w-20 border border-purple-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-purple-400"
+                      />
+                      <span className="text-xs text-gray-400">({formatTime(pendingOverlayTime)})</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Type className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                       <input
@@ -1384,9 +1417,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       <Button size="sm" onClick={saveOverlay}
                         disabled={!newOverlayText.trim() && !newOverlayImageDataUrl}
                         className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                        <Check className="w-3.5 h-3.5 mr-1" /> Save
+                        <Check className="w-3.5 h-3.5 mr-1" /> {editingOverlayId ? "Update" : "Save"}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setAddingOverlay(false)} className="text-gray-500 text-xs">Cancel</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setAddingOverlay(false); setEditingOverlayId(null); }} className="text-gray-500 text-xs">Cancel</Button>
                     </div>
                   </div>
                 </div>
@@ -1401,7 +1434,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                       <span className="text-gray-500 shrink-0">→ {ov.duration}s</span>
                       {ov.imageDataUrl && <img src={ov.imageDataUrl} alt="" className="h-6 w-8 object-cover rounded shrink-0" />}
                       {ov.text && <span className="text-gray-700 truncate max-w-[120px]">{ov.text}</span>}
-                      <button onClick={() => deleteOverlay(ov.id)} className="ml-auto text-gray-300 hover:text-red-400 shrink-0"><X className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => editOverlay(ov)} className="ml-auto text-gray-300 hover:text-blue-500 shrink-0"><Pencil className="w-3 h-3" /></button>
+                      <button onClick={() => deleteOverlay(ov.id)} className="text-gray-300 hover:text-red-400 shrink-0"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   ))}
                 </div>
