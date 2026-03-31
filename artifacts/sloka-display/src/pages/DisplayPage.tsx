@@ -367,27 +367,41 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const audio = new Audio(url);
     audio.addEventListener("loadedmetadata", () => setAudioDuration(audio.duration));
     audio.addEventListener("ended", () => {
-      setIsPlaying(false);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (phaseRef.current === "timing") {
+        setIsPlaying(false);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         const next = [...timestampsRef.current];
         const startIdx = timingIndexRef.current;
         const nw = localItemsLenRef.current;
-        // Don't fill unmarked positions — partial cycles are allowed.
-        // Just advance timingIndex to the cycle boundary so the next cycle can start.
         const cycleEnd = nw > 0 ? (Math.floor(startIdx / nw) + 1) * nw : startIdx;
         timestampsRef.current = next;
         timingIndexRef.current = cycleEnd;
         setTimestamps([...next]);
         setTimingIndex(cycleEnd);
         audioEndedInTimingRef.current = true;
+        return;
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        autoDownloadRef.current = true;
-        mediaRecorderRef.current.stop();
-        setIsRecording(false);
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      if (isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        const keepDrawing = () => {
+          if (!isRecordingRef.current) return;
+          drawCanvasFrame(canvasRef.current, lastActiveRef.current, displayStateRef.current, audioRef.current?.duration ?? 0);
+          rafRef.current = requestAnimationFrame(keepDrawing);
+        };
+        rafRef.current = requestAnimationFrame(keepDrawing);
+        setTimeout(() => {
+          if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            autoDownloadRef.current = true;
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+          setIsPlaying(false);
+          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        }, 5500);
+      } else {
+        setIsPlaying(false);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
       }
     });
     audioRef.current = audio;
