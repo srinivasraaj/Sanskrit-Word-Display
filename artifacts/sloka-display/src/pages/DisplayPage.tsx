@@ -91,7 +91,7 @@ function drawCanvasFrame(
     return;
   }
 
-  const SF = Math.max(16, Math.min(ds.slokaFontSize, 42));
+  const SF = Math.max(16, ds.slokaFontSize);
   const fontStyle = ds.slokaItalic ? "italic " : "";
   const fontWeight = ds.slokaBold ? "bold " : "";
   ctx.font = `${fontStyle}${fontWeight}${SF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
@@ -122,8 +122,8 @@ function drawCanvasFrame(
   ctx.closePath();
   ctx.fill();
 
-  const WF = Math.max(14, Math.min(ds.previousFontSize, 38));
-  const WFA = Math.max(14, Math.min(ds.highlightedFontSize, 48));
+  const WF = Math.max(14, ds.previousFontSize);
+  const WFA = Math.max(14, ds.highlightedFontSize);
   const ROWS = 3;
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
   const wordsY = divY + 48;
