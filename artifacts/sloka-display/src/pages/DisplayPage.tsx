@@ -27,6 +27,7 @@ function drawCanvasFrame(
     slokaColor: string; overlayTextColor: string; pastWordColor: string;
     slokaBold: boolean; slokaItalic: boolean; highlightCleared: boolean;
     overlays: OverlayMarker[]; localItems: string[];
+    colXFractions: number[];
   },
   currentTime: number
 ) {
@@ -129,40 +130,18 @@ function drawCanvasFrame(
   const wordsY = divY + 48;
 
   const numCols = Math.ceil(ds.groupWords.length / ROWS);
-  const COL_GAP = W * 0.025;
 
-  // Step 1: measure each word at BOTH font sizes; column width = max across all its words.
-  // We must measure ALL words (including future/invisible) so layout is stable every frame.
+  // Use DOM-measured column fractions (set from actual HTML preview layout) so
+  // canvas column positions exactly mirror the browser's text rendering.
+  // Falls back to equal slots if DOM fractions aren't available yet.
+  const fractions = ds.colXFractions.length >= numCols
+    ? ds.colXFractions.slice(0, numCols)
+    : Array.from({ length: numCols }, (_, c) => c / numCols);
+  const rColX = fractions.map((f) => f * W);
+
+  // Arrow width — only needed for the active word; measure at active font.
   ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
   const arrowW = ctx.measureText("▶ ").width;
-  const colMaxWFA: number[] = Array(numCols).fill(0);
-  const colMaxWF: number[]  = Array(numCols).fill(0);
-  for (let i = 0; i < ds.groupWords.length; i++) {
-    const item = ds.localItems[ds.groupStart + i];
-    if (!item) continue;
-    const col = Math.floor(i / ROWS);
-    ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-    colMaxWFA[col] = Math.max(colMaxWFA[col], ctx.measureText(item).width);
-    ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
-    colMaxWF[col]  = Math.max(colMaxWF[col],  ctx.measureText(item).width);
-  }
-  // Each column reserves: widest-word-at-WFA + arrowW (one arrow per column, worst-case)
-  const colWidths = colMaxWFA.map((w) => w + arrowW);
-
-  // Step 2: compute cumulative column start positions.
-  const colX: number[] = [startX];
-  for (let c = 1; c < numCols; c++) {
-    colX[c] = colX[c - 1] + colWidths[c - 1] + COL_GAP;
-  }
-
-  // Step 3: if the layout overflows the canvas, scale BOTH font sizes and positions together.
-  const totalW = colX[numCols - 1] + colWidths[numCols - 1] + startX;
-  const fontScale = totalW > W ? (W - 2 * startX - (numCols - 1) * COL_GAP) /
-    colMaxWFA.reduce((s, w) => s + w + arrowW, 0) : 1;
-  const rWF  = WF  * fontScale;
-  const rWFA = WFA * fontScale;
-  const rArrowW = arrowW * fontScale;
-  const rColX = colX.map((x) => x * fontScale + startX * (1 - fontScale));
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
@@ -180,12 +159,12 @@ function drawCanvasFrame(
     const x = rColX[col];
     const y = wordsY + row * rowGap;
     if (isActive) {
-      ctx.font = `bold ${rWFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.font = `bold ${WFA}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
       ctx.fillText("▶ ", x, y);
-      ctx.fillText(item, x + rArrowW, y);
+      ctx.fillText(item, x + arrowW, y);
     } else {
-      ctx.font = `${rWF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.pastWordColor;
       ctx.fillText(item, x, y);
     }
@@ -248,6 +227,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const markersFileInputRef = useRef<HTMLInputElement>(null);
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wordColsContainerRef = useRef<HTMLDivElement>(null);
+  const colDivRefs = useRef<(HTMLDivElement | null)[]>([]);
   const isRecordingRef = useRef(false);
   const displayStateRef = useRef({
     groupLines: [] as string[],
@@ -265,6 +246,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     highlightCleared: false,
     overlays: [] as OverlayMarker[],
     localItems: [] as string[],
+    colXFractions: [] as number[],
   });
 
   const [overlays, setOverlays] = useState<OverlayMarker[]>([]);
@@ -290,6 +272,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   // Do NOT add a useEffect to sync state→ref here — that causes stale overwrites because
   // React processes old setTimestamps calls after newer direct ref writes.
   useEffect(() => {
+    // Measure actual rendered column positions from DOM so the canvas layout
+    // exactly matches the HTML preview — bypassing ctx.measureText() which
+    // is inaccurate for complex scripts like Telugu.
+    let colXFractions: number[] = [];
+    const container = wordColsContainerRef.current;
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      const cw = containerRect.width;
+      if (cw > 0) {
+        colXFractions = colDivRefs.current
+          .filter(Boolean)
+          .map((el) => (el!.getBoundingClientRect().left - containerRect.left) / cw);
+      }
+    }
     displayStateRef.current = {
       groupLines: groups[displayGroup]?.lines ?? [],
       groupWords: groups[displayGroup]?.words ?? [],
@@ -306,6 +302,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       highlightCleared,
       overlays,
       localItems,
+      colXFractions,
     };
   });
 
@@ -1704,7 +1701,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </svg>
               </div>
 
-              <div className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
+              <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
                 style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
                 {(() => {
                   const ROWS_PER_COL = 3;
@@ -1712,7 +1709,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   return Array.from({ length: numCols }, (_, colIdx) => {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
-                      <div key={`${displayGroup}-${colIdx}`} className="flex flex-col gap-24 shrink-0">
+                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className="flex flex-col gap-24 shrink-0">
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
