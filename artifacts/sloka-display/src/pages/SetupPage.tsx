@@ -137,7 +137,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-5xl space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-amber-900 mb-1">Sanskrit Sloka Display</h1>
           <p className="text-amber-700 text-sm">Configure your sloka and word sequence</p>
@@ -175,19 +175,19 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className={`grid gap-4 ${numGroups === 1 ? 'grid-cols-1' : numGroups === 2 ? 'grid-cols-2' : numGroups === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-4'}`}>
           {Array.from({ length: numGroups }, (_, groupIdx) => {
             const groupLines = slokaLines.slice(groupIdx * 2, groupIdx * 2 + 2);
             return (
               <Card key={groupIdx} className="border-amber-200 shadow-md">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-amber-800 text-base">
-                    Words for Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, slokaLines.length)}
+                  <CardTitle className="text-amber-800 text-sm">
+                    Lines {groupIdx * 2 + 1}–{Math.min(groupIdx * 2 + 2, slokaLines.length)}
                   </CardTitle>
                   {groupLines.length > 0 && (
                     <div className="mt-1 space-y-0.5">
                       {groupLines.map((line, li) => (
-                        <p key={li} className="text-amber-700 text-sm leading-snug"
+                        <p key={li} className="text-amber-700 text-xs leading-snug"
                           style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}>
                           {line}
                         </p>
@@ -203,8 +203,8 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                       updated[groupIdx] = e.target.value;
                       setWordsTexts(updated);
                     }}
-                    placeholder="One word or phrase per line…"
-                    className="border-amber-200 text-amber-900 bg-white font-serif min-h-[120px] resize-y"
+                    placeholder="One word per line…"
+                    className="border-amber-200 text-amber-900 bg-white font-serif min-h-[100px] resize-y text-sm"
                     style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}
                   />
                 </CardContent>
