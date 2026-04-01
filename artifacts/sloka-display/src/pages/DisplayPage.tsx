@@ -41,6 +41,10 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
+const UNHIGHLIGHT_DURATION = 400;
+let _canvasPrevHighlightCleared = false;
+let _canvasUnhighlightStartTime = 0;
+
 function drawCanvasFrame(
   canvas: HTMLCanvasElement | null,
   activeIdx: number,
@@ -178,14 +182,29 @@ function drawCanvasFrame(
     _canvasPrevActiveIdx = activeWordIdx;
   }
 
+  if (ds.highlightCleared && !_canvasPrevHighlightCleared) {
+    _canvasUnhighlightStartTime = now;
+  }
+  _canvasPrevHighlightCleared = ds.highlightCleared;
+
   const rawT = _canvasActiveChangeTime > 0 ? Math.min((now - _canvasActiveChangeTime) / ANIM_DURATION, 1) : 1;
   const t = easeOutCubic(rawT);
+
+  let unhighlightT = 1;
+  if (ds.highlightCleared && _canvasUnhighlightStartTime > 0) {
+    const rawU = Math.min((now - _canvasUnhighlightStartTime) / UNHIGHLIGHT_DURATION, 1);
+    unhighlightT = easeOutCubic(rawU);
+  }
+
+  const highlightRGB = hexToRgb(ds.highlightColor);
+  const pastRGB = hexToRgb(ds.pastWordColor);
 
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
     if (!item) continue;
-    const isActive = !ds.highlightCleared && globalIdx === activeWordIdx;
+    const wasActive = globalIdx === activeWordIdx;
+    const isActive = !ds.highlightCleared && wasActive;
     const isPast = activeWordIdx >= 0 && (ds.highlightCleared ? globalIdx <= activeWordIdx : globalIdx < activeWordIdx);
     if (!isActive && !isPast) continue;
     const col = Math.floor(i / ROWS);
@@ -199,6 +218,20 @@ function drawCanvasFrame(
       ctx.fillStyle = ds.highlightColor;
       ctx.fillText("▶ ", x, y);
       ctx.fillText(item, x + arrowW, y);
+    } else if (ds.highlightCleared && wasActive && unhighlightT < 1) {
+      const fontSize = WFA + (WF - WFA) * unhighlightT;
+      ctx.font = `${unhighlightT < 0.5 ? "bold " : ""}${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
+      ctx.fillStyle = lerpColor(highlightRGB, pastRGB, unhighlightT);
+      const arrowOpacity = 0.85 * (1 - unhighlightT);
+      if (arrowOpacity > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = arrowOpacity;
+        ctx.fillText("▶ ", x, y);
+        ctx.restore();
+        ctx.fillText(item, x + arrowW, y);
+      } else {
+        ctx.fillText(item, x, y);
+      }
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.pastWordColor;
@@ -237,6 +270,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const lastDisplayGroupRef = useRef(0);
   const groupStartIndicesRef = useRef<number[]>(groupStartIndices);
   const numGroupsRef = useRef(groups.length);
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -436,6 +471,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         lastActiveRef.current = active;
         lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
+        displayStateRef.current = { ...displayStateRef.current, highlightCleared: false };
         setCurrentIndex(active);
         const nw2 = localItemsLenRef.current;
         const localIdx = nw2 > 0 ? active % nw2 : -1;
@@ -468,6 +504,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               lastClearedIdxRef.current = active;
               lastWordHitTimeRef.current = -1;
               setHighlightCleared(true);
+              displayStateRef.current = { ...displayStateRef.current, highlightCleared: true };
             }
           }, 5000);
         }
@@ -484,6 +521,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       lastWordHitTimeRef.current = -1;
       if (lastWordClearTimerRef.current) { clearTimeout(lastWordClearTimerRef.current); lastWordClearTimerRef.current = null; }
       setHighlightCleared(true);
+      displayStateRef.current = { ...displayStateRef.current, highlightCleared: true };
     }
 
     // Compute display group every frame for smooth group transitions.
@@ -529,6 +567,15 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (newGroup !== lastDisplayGroupRef.current) {
       lastDisplayGroupRef.current = newGroup;
       setDisplayGroup(newGroup);
+      const g = groupsRef.current[newGroup];
+      if (g) {
+        displayStateRef.current = {
+          ...displayStateRef.current,
+          groupLines: g.lines ?? [],
+          groupWords: g.words ?? [],
+          groupStart: groupStartIndicesRef.current[newGroup] ?? 0,
+        };
+      }
     }
 
     if (isRecordingRef.current) {
@@ -1002,6 +1049,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setDisplayGroup(0);
       setAudioCurrentTime(0);
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+
+      _canvasPrevActiveIdx = -1;
+      _canvasActiveChangeTime = -1;
+      _canvasPrevHighlightCleared = false;
+      _canvasUnhighlightStartTime = 0;
 
       mediaRecorderRef.current = recorder;
       recorder.start(100);
