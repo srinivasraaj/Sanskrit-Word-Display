@@ -450,7 +450,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           isLastInGroup = localIdx === groupEnd;
         }
         let isLastTimedInCycle = false;
-        if (nw2 > 0 && active >= 0) {
+        if (phaseRef.current === "playback" && nw2 > 0 && active >= 0) {
           const base = Math.floor(active / nw2) * nw2;
           const cycleEnd = Math.min(base + nw2, ts.length);
           let foundLater = false;
