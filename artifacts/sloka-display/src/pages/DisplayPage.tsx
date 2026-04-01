@@ -642,6 +642,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     timingIndexRef.current = nextIdx;
     setTimestamps(next);
     setTimingIndex(nextIdx);
+    const nextCycleLocal = nextIdx % numWords;
+    const newTabGroup = getTimingDisplayGroup(Math.min(nextCycleLocal, numWords - 1));
+    setDisplayGroup(newTabGroup);
   }, [isPlaying, localItems.length]);
 
   useEffect(() => {
@@ -1450,15 +1453,39 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               )}
             </div>
 
+            {groups.length > 1 && (
+              <div className="flex border-b border-gray-200 px-4 pt-2 gap-1 shrink-0">
+                {groups.map((_, tabIdx) => {
+                  const tabCurrentGroup = tabIdx === getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
+                  const tabGroupEnd = groupStartIndices[tabIdx] + groups[tabIdx].words.length;
+                  const tabFullyTimed = cycleTimingIndex >= tabGroupEnd;
+                  return (
+                    <button
+                      key={tabIdx}
+                      onClick={() => setDisplayGroup(tabIdx)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${
+                        displayGroup === tabIdx
+                          ? "bg-white text-amber-700 border-gray-200"
+                          : "bg-gray-50 text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100"
+                      } ${tabCurrentGroup ? "ring-1 ring-amber-300" : ""}`}
+                    >
+                      Group {tabIdx + 1}
+                      {tabFullyTimed && <CheckCircle className="w-3 h-3 ml-1 inline text-green-500" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto p-4" ref={wordListRef}>
-              <div className={`grid gap-4 ${groups.length === 1 ? 'grid-cols-1' : groups.length === 2 ? 'grid-cols-2' : groups.length === 3 ? 'grid-cols-3' : 'grid-cols-2 xl:grid-cols-4'}`}>
+              <div className="space-y-4 max-w-lg">
                 {groups.map((group, groupIdx) => {
+                  if (groups.length > 1 && groupIdx !== displayGroup) return null;
                   const groupStart = groupStartIndices[groupIdx];
                   const isCurrentGroup = groupIdx === getTimingDisplayGroup(Math.min(cycleTimingIndex, numWords - 1));
                   const groupEnd = groupStart + group.words.length;
                   const groupFullyTimed = cycleTimingIndex >= groupEnd;
                   return (
-                    <div key={groupIdx} className="border border-gray-200 rounded-lg p-3 bg-white">
+                    <div key={groupIdx}>
                       {groupIdx > 0 && groups.length > 1 && (() => {
                         const transIdx = groupIdx - 1;
                         // Per-transition times — only show chips for this specific transIdx.
