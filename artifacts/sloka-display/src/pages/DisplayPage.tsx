@@ -196,8 +196,8 @@ function drawCanvasFrame(
     unhighlightT = easeOutCubic(rawU);
   }
 
-  const highlightRGB = hexToRgb(ds.highlightColor);
-  const pastRGB = hexToRgb(ds.pastWordColor);
+  const highlightRGB = parseHexColor(ds.highlightColor);
+  const pastRGB = parseHexColor(ds.pastWordColor);
 
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
