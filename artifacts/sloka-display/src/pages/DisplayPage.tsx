@@ -170,7 +170,7 @@ function drawCanvasFrame(
   ctx.fill();
 
   const wordCount = ds.groupWords.length;
-  const MAX_COLS = 4;
+  const MAX_COLS = 3;
   let ROWS = 3;
   if (wordCount > MAX_COLS * 3) {
     ROWS = Math.ceil(wordCount / MAX_COLS);
@@ -2038,10 +2038,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               </div>
 
               <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-y-hidden pb-6"
-                style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px", paddingTop: displayGroupWords.length > 12 ? "6px" : "48px" }}>
+                style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px", paddingTop: displayGroupWords.length > 9 ? "6px" : "48px" }}>
                 {(() => {
                   const wc = displayGroupWords.length;
-                  const MAX_COLS = 4;
+                  const MAX_COLS = 3;
                   let ROWS_PER_COL = 3;
                   if (wc > MAX_COLS * 3) {
                     ROWS_PER_COL = Math.ceil(wc / MAX_COLS);
