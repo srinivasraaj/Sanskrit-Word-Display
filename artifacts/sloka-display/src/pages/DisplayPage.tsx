@@ -175,7 +175,16 @@ function drawCanvasFrame(
   if (wordCount > MAX_COLS * 3) {
     ROWS = Math.ceil(wordCount / MAX_COLS);
   }
-  const fontScale = ROWS > 3 ? Math.max(0.55, 3 / ROWS) : 1;
+  const numCols0 = Math.ceil(wordCount / ROWS);
+  const maxChars = ds.groupWords.reduce((m: number, w: string) => Math.max(m, [...w].length), 0);
+  const avgColPct = numCols0 > 0 ? (100 / numCols0) : 100;
+  const charThreshold = avgColPct < 30 ? 8 : avgColPct < 40 ? 10 : 14;
+  let longWordScale = 1;
+  if (maxChars > charThreshold) {
+    longWordScale = Math.max(0.5, charThreshold / maxChars);
+  }
+  const rowScale = ROWS > 3 ? Math.max(0.55, 3 / ROWS) : 1;
+  const fontScale = Math.min(rowScale, longWordScale);
   const WF = Math.max(10, ds.previousFontSize * fontScale);
   const WFA = Math.max(10, ds.highlightedFontSize * fontScale);
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, ROWS > 3 ? 36 : 56);
@@ -2037,7 +2046,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   if (wc > MAX_COLS * 3) {
                     ROWS_PER_COL = Math.ceil(wc / MAX_COLS);
                   }
-                  const fontScale = ROWS_PER_COL > 3 ? Math.max(0.55, 3 / ROWS_PER_COL) : 1;
+                  const numCols0 = Math.ceil(wc / ROWS_PER_COL);
+                  const maxChars = displayGroupWords.reduce((m, w) => Math.max(m, [...w].length), 0);
+                  const avgColWidth = numCols0 > 0 ? (100 / numCols0) : 100;
+                  const charThreshold = avgColWidth < 30 ? 8 : avgColWidth < 40 ? 10 : 14;
+                  let longWordScale = 1;
+                  if (maxChars > charThreshold) {
+                    longWordScale = Math.max(0.5, charThreshold / maxChars);
+                  }
+                  const rowScale = ROWS_PER_COL > 3 ? Math.max(0.55, 3 / ROWS_PER_COL) : 1;
+                  const fontScale = Math.min(rowScale, longWordScale);
                   const scaledPrev = previousFontSize * fontScale;
                   const scaledHL = highlightedFontSize * fontScale;
                   const gapClass = ROWS_PER_COL > 4 ? "gap-4" : ROWS_PER_COL > 3 ? "gap-10" : "gap-24";
