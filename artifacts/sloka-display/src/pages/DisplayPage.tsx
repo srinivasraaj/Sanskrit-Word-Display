@@ -45,6 +45,26 @@ const UNHIGHLIGHT_DURATION = 400;
 let _canvasPrevHighlightCleared = false;
 let _canvasUnhighlightStartTime = 0;
 
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  if (maxWidth <= 0) return [text];
+  const measured = ctx.measureText(text).width;
+  if (measured <= maxWidth) return [text];
+  const chars = [...text];
+  const lines: string[] = [];
+  let cur = "";
+  for (const ch of chars) {
+    const test = cur + ch;
+    if (ctx.measureText(test).width > maxWidth && cur) {
+      lines.push(cur);
+      cur = ch;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function drawCanvasFrame(
   canvas: HTMLCanvasElement | null,
   activeIdx: number,
@@ -199,6 +219,8 @@ function drawCanvasFrame(
   const highlightRGB = parseHexColor(ds.highlightColor);
   const pastRGB = parseHexColor(ds.pastWordColor);
 
+  const colWidth = numCols > 0 ? (W * 0.95) / numCols : W * 0.95;
+
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
     const item = ds.localItems[globalIdx];
@@ -212,30 +234,35 @@ function drawCanvasFrame(
     const x = rColX[col];
     if (x > W - SAFE_RIGHT) continue;
     const y = wordsY + row * rowGap;
+    const maxTextW = colWidth - arrowW - 4;
+
     if (isActive) {
       const fontSize = WF + (WFA - WF) * t;
       ctx.font = `bold ${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.highlightColor;
+      const wrapped = wrapCanvasText(ctx, item, maxTextW);
       ctx.fillText("▶ ", x, y);
-      ctx.fillText(item, x + arrowW, y);
+      wrapped.forEach((ln, li) => ctx.fillText(ln, x + arrowW, y + li * fontSize * 1.3));
     } else if (ds.highlightCleared && wasActive && unhighlightT < 1) {
       const fontSize = WFA + (WF - WFA) * unhighlightT;
       ctx.font = `${unhighlightT < 0.5 ? "bold " : ""}${fontSize}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = lerpColor(highlightRGB, pastRGB, unhighlightT);
+      const wrapped = wrapCanvasText(ctx, item, maxTextW);
       const arrowOpacity = 0.85 * (1 - unhighlightT);
       if (arrowOpacity > 0.01) {
         ctx.save();
         ctx.globalAlpha = arrowOpacity;
         ctx.fillText("▶ ", x, y);
         ctx.restore();
-        ctx.fillText(item, x + arrowW, y);
+        wrapped.forEach((ln, li) => ctx.fillText(ln, x + arrowW, y + li * fontSize * 1.3));
       } else {
-        ctx.fillText(item, x, y);
+        wrapped.forEach((ln, li) => ctx.fillText(ln, x, y + li * fontSize * 1.3));
       }
     } else {
       ctx.font = `${WF}px 'Noto Sans Telugu','Noto Serif Telugu','Mandali',Georgia,serif`;
       ctx.fillStyle = ds.pastWordColor;
-      ctx.fillText(item, x, y);
+      const wrapped = wrapCanvasText(ctx, item, colWidth - 4);
+      wrapped.forEach((ln, li) => ctx.fillText(ln, x, y + li * WF * 1.3));
     }
   }
 }
@@ -1927,15 +1954,17 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </svg>
               </div>
 
-              <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-x-auto overflow-y-hidden pt-12 pb-6 gap-8"
+              <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-y-hidden pt-12 pb-6"
                 style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
                 {(() => {
                   const ROWS_PER_COL = 3;
                   const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
+                  const colWidthPct = numCols > 0 ? `${100 / numCols}%` : "100%";
                   return Array.from({ length: numCols }, (_, colIdx) => {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
-                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className="flex flex-col gap-24 shrink-0">
+                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className="flex flex-col gap-24 shrink-0"
+                        style={{ width: colWidthPct, minWidth: 0 }}>
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
@@ -1943,24 +1972,24 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           const isActive = !highlightCleared && globalIdx === activeWordIdx;
                           const isPast = activeWordIdx >= 0 && (highlightCleared ? globalIdx <= activeWordIdx : globalIdx < activeWordIdx);
                           return (
-                            <div key={globalIdx} className="flex items-center select-none"
+                            <div key={globalIdx} className="flex items-start select-none"
                               style={{
                                 fontSize: isActive ? `${highlightedFontSize}px` : `${previousFontSize}px`,
                                 color: isActive ? highlightColor : isPast ? pastWordColor : "transparent",
                                 fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                 lineHeight: 1.3,
                                 transform: "scale(1)",
-                                transformOrigin: "left center",
+                                transformOrigin: "left top",
                                 transition: "font-size 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
                                 textShadow: "none",
                                 fontWeight: isActive ? "700" : "400",
-                                whiteSpace: "nowrap",
+                                overflowWrap: "break-word",
+                                wordBreak: "break-word",
                                 willChange: "transform, color",
-                                contain: "layout style",
                               }}>
-                              <span className="inline-block mr-1 text-sm"
-                                style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)" }}>▶</span>
-                              {item}
+                              <span className="inline-block mr-1 text-sm shrink-0"
+                                style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)", marginTop: "0.15em" }}>▶</span>
+                              <span style={{ minWidth: 0 }}>{item}</span>
                             </div>
                           );
                         })}
