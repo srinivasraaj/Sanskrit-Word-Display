@@ -1241,12 +1241,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     for (const key of Object.keys(groupTransitionTimes)) {
       fmtGroupTransitionTimes[key] = groupTransitionTimes[Number(key)].map(fmtTs);
     }
+    const groupWordCounts = groups.map(g => g.words.length);
     const payload = {
       words: localItems,
       timestamps: timestamps.map(fmtTs),
       groupTransitionTimes: fmtGroupTransitionTimes,
       overlays: overlays.map(ov => ({ ...ov, startTime: fmtTs(ov.startTime), duration: fmtTs(ov.duration) })),
       audioDuration: fmtTs(audioRef.current?.duration ?? null),
+      groupWordCounts,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1287,8 +1289,30 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         setHighlightCleared(false);
         setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
-          setLocalItems(json.words);
-          localItemsLenRef.current = json.words.length;
+          const loadedWords: string[] = json.words;
+          if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
+            const gwc: number[] = json.groupWordCounts;
+            const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
+            if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
+              let offset = 0;
+              const updatedGroups = groups.map((g, gi) => {
+                const count = gwc[gi];
+                const newWords = loadedWords.slice(offset, offset + count);
+                offset += count;
+                return { ...g, words: newWords };
+              });
+              const newFlat = updatedGroups.flatMap(g => g.words);
+              setLocalItems(newFlat);
+              localItemsLenRef.current = newFlat.length;
+              groupsRef.current = updatedGroups;
+            } else {
+              setLocalItems(loadedWords);
+              localItemsLenRef.current = loadedWords.length;
+            }
+          } else {
+            setLocalItems(loadedWords);
+            localItemsLenRef.current = loadedWords.length;
+          }
         }
         if (json.overlays && Array.isArray(json.overlays)) {
           setOverlays(json.overlays.map((ov: any) => ({
