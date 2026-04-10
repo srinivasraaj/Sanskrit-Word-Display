@@ -169,13 +169,19 @@ function drawCanvasFrame(
   ctx.closePath();
   ctx.fill();
 
-  const WF = Math.max(14, ds.previousFontSize);
-  const WFA = Math.max(14, ds.highlightedFontSize);
-  const ROWS = 3;
-  const rowGap = Math.max(Math.max(WF, WFA) * 2.4, 56);
-  const wordsY = divY + 48;
+  const wordCount = ds.groupWords.length;
+  const MAX_COLS = 4;
+  let ROWS = 3;
+  if (wordCount > MAX_COLS * 3) {
+    ROWS = Math.ceil(wordCount / MAX_COLS);
+  }
+  const fontScale = ROWS > 3 ? Math.max(0.55, 3 / ROWS) : 1;
+  const WF = Math.max(10, ds.previousFontSize * fontScale);
+  const WFA = Math.max(10, ds.highlightedFontSize * fontScale);
+  const rowGap = Math.max(Math.max(WF, WFA) * 2.4, ROWS > 3 ? 36 : 56);
+  const wordsY = divY + (ROWS > 3 ? 24 : 48);
 
-  const numCols = Math.ceil(ds.groupWords.length / ROWS);
+  const numCols = Math.ceil(wordCount / ROWS);
 
   // Use DOM-measured column fractions — the HTML preview shows correct layout,
   // so we map those proportional positions onto the canvas.  This avoids
@@ -2022,16 +2028,25 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                 </svg>
               </div>
 
-              <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-y-hidden pt-12 pb-6"
-                style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px" }}>
+              <div ref={wordColsContainerRef} className="flex-1 flex items-start justify-start overflow-y-hidden pb-6"
+                style={{ background: "#ffffff", paddingLeft: "16px", paddingRight: "16px", paddingTop: displayGroupWords.length > 12 ? "6px" : "48px" }}>
                 {(() => {
-                  const ROWS_PER_COL = 3;
-                  const numCols = Math.ceil(displayGroupWords.length / ROWS_PER_COL);
+                  const wc = displayGroupWords.length;
+                  const MAX_COLS = 4;
+                  let ROWS_PER_COL = 3;
+                  if (wc > MAX_COLS * 3) {
+                    ROWS_PER_COL = Math.ceil(wc / MAX_COLS);
+                  }
+                  const fontScale = ROWS_PER_COL > 3 ? Math.max(0.55, 3 / ROWS_PER_COL) : 1;
+                  const scaledPrev = previousFontSize * fontScale;
+                  const scaledHL = highlightedFontSize * fontScale;
+                  const gapClass = ROWS_PER_COL > 4 ? "gap-4" : ROWS_PER_COL > 3 ? "gap-10" : "gap-24";
+                  const numCols = Math.ceil(wc / ROWS_PER_COL);
                   const colWidthPct = numCols > 0 ? `${100 / numCols}%` : "100%";
                   return Array.from({ length: numCols }, (_, colIdx) => {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
-                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className="flex flex-col gap-24 shrink-0"
+                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className={`flex flex-col ${gapClass} shrink-0`}
                         style={{ width: colWidthPct, minWidth: 0 }}>
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
@@ -2042,7 +2057,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                           return (
                             <div key={globalIdx} className="flex items-start select-none"
                               style={{
-                                fontSize: isActive ? `${highlightedFontSize}px` : `${previousFontSize}px`,
+                                fontSize: isActive ? `${scaledHL}px` : `${scaledPrev}px`,
                                 color: isActive ? highlightColor : isPast ? pastWordColor : "transparent",
                                 fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif",
                                 lineHeight: 1.3,
@@ -2055,8 +2070,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                 wordBreak: "break-word",
                                 willChange: "transform, color",
                               }}>
-                              <span className="inline-block mr-1 text-sm shrink-0"
-                                style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "1em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)", marginTop: "0.15em" }}>▶</span>
+                              <span className="inline-block mr-1 shrink-0"
+                                style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "0.8em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)", marginTop: "0.15em", fontSize: `${Math.max(10, scaledPrev * 0.7)}px` }}>▶</span>
                               <span style={{ minWidth: 0 }}>{item}</span>
                             </div>
                           );
