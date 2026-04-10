@@ -941,6 +941,35 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     }
   };
 
+  const [editingTimestamp, setEditingTimestamp] = useState<{ cycleIdx: number; wordIdx: number } | null>(null);
+  const [editingTimestampValue, setEditingTimestampValue] = useState("");
+
+  const startEditTimestamp = (cycleIdx: number, wordIdx: number, currentVal: number) => {
+    setEditingTimestamp({ cycleIdx, wordIdx });
+    setEditingTimestampValue(formatTime(currentVal));
+  };
+
+  const saveEditTimestamp = () => {
+    if (!editingTimestamp) return;
+    const parts = editingTimestampValue.split(":");
+    let seconds = 0;
+    if (parts.length === 2) {
+      seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+    } else {
+      seconds = parseFloat(editingTimestampValue);
+    }
+    if (isNaN(seconds) || seconds < 0) { setEditingTimestamp(null); return; }
+    const nw = localItemsLenRef.current;
+    const flatIdx = editingTimestamp.cycleIdx * nw + editingTimestamp.wordIdx;
+    const existing = [...timestampsRef.current];
+    if (flatIdx < existing.length) {
+      existing[flatIdx] = seconds;
+      timestampsRef.current = existing;
+      setTimestamps([...existing]);
+    }
+    setEditingTimestamp(null);
+  };
+
   // Seek audio to a specific time (used by clickable timestamp chips).
   const seekToTime = (t: number) => {
     const audio = audioRef.current;
@@ -1734,33 +1763,60 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                               </div>
                               {cycleChips.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-0.5 ml-[60px]">
-                                  {cycleChips.map(({ cycleIdx, t }) => (
-                                    <span
-                                      key={cycleIdx}
-                                      className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
-                                      style={{
-                                        background: cycleIdx === currentCycleIndex ? `${highlightColor}15` : "#f0fdf4",
-                                        borderColor: cycleIdx === currentCycleIndex ? highlightColor : "#86efac",
-                                        color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
-                                      }}
-                                    >
-                                      <button
-                                        onClick={() => seekToTime(t)}
-                                        className="hover:underline focus:outline-none"
-                                        title={`Seek to Cycle ${cycleIdx + 1} timestamp`}
-                                        style={{ color: "inherit" }}
+                                  {cycleChips.map(({ cycleIdx, t }) => {
+                                    const isEditing = editingTimestamp?.cycleIdx === cycleIdx && editingTimestamp?.wordIdx === i;
+                                    return (
+                                      <span
+                                        key={cycleIdx}
+                                        className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border"
+                                        style={{
+                                          background: cycleIdx === currentCycleIndex ? `${highlightColor}15` : "#f0fdf4",
+                                          borderColor: isEditing ? "#3b82f6" : cycleIdx === currentCycleIndex ? highlightColor : "#86efac",
+                                          color: cycleIdx === currentCycleIndex ? highlightColor : "#15803d",
+                                        }}
                                       >
-                                        C{cycleIdx + 1}: {formatTime(t)}
-                                      </button>
-                                      <button
-                                        onClick={() => removeTimestamp(cycleIdx, i)}
-                                        className="ml-0.5 opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
-                                        title={`Remove Cycle ${cycleIdx + 1} timestamp`}
-                                      >
-                                        <X className="w-2.5 h-2.5" />
-                                      </button>
-                                    </span>
-                                  ))}
+                                        {isEditing ? (
+                                          <>
+                                            <span style={{ color: "inherit" }}>C{cycleIdx + 1}:</span>
+                                            <input
+                                              autoFocus
+                                              value={editingTimestampValue}
+                                              onChange={(e) => setEditingTimestampValue(e.target.value)}
+                                              onKeyDown={(e) => { if (e.key === "Enter") saveEditTimestamp(); if (e.key === "Escape") setEditingTimestamp(null); }}
+                                              onBlur={saveEditTimestamp}
+                                              className="bg-transparent border-none outline-none text-[10px] font-mono"
+                                              style={{ width: "52px", color: "inherit", padding: 0 }}
+                                            />
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button
+                                              onClick={() => seekToTime(t)}
+                                              className="hover:underline focus:outline-none"
+                                              title={`Seek to Cycle ${cycleIdx + 1} timestamp`}
+                                              style={{ color: "inherit" }}
+                                            >
+                                              C{cycleIdx + 1}: {formatTime(t)}
+                                            </button>
+                                            <button
+                                              onClick={() => startEditTimestamp(cycleIdx, i, t)}
+                                              className="ml-0.5 opacity-60 hover:opacity-100 hover:text-blue-500 transition-all"
+                                              title={`Edit Cycle ${cycleIdx + 1} timestamp`}
+                                            >
+                                              <Pencil className="w-2.5 h-2.5" />
+                                            </button>
+                                            <button
+                                              onClick={() => removeTimestamp(cycleIdx, i)}
+                                              className="opacity-60 hover:opacity-100 hover:text-red-500 transition-all"
+                                              title={`Remove Cycle ${cycleIdx + 1} timestamp`}
+                                            >
+                                              <X className="w-2.5 h-2.5" />
+                                            </button>
+                                          </>
+                                        )}
+                                      </span>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
