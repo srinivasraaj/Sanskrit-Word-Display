@@ -979,10 +979,16 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   };
 
   // Move the timing cursor to a specific word so it can be re-marked.
-  // Uses the current cycle index so it stays within the active cycle.
+  // If the cursor sits at a cycle boundary (all words marked, about to start
+  // a new cycle), step back to the just-completed cycle so re-marks update the
+  // existing timestamps instead of writing into a new cycle.
   const jumpToWord = (wordIdx: number) => {
     const nw = localItemsLenRef.current;
-    const cycleIdx = nw > 0 ? Math.floor(timingIndexRef.current / nw) : 0;
+    if (nw === 0) return;
+    let cycleIdx = Math.floor(timingIndexRef.current / nw);
+    if (cycleIdx > 0 && timingIndexRef.current % nw === 0) {
+      cycleIdx -= 1;
+    }
     const newTi = cycleIdx * nw + wordIdx;
     timingIndexRef.current = newTi;
     setTimingIndex(newTi);
