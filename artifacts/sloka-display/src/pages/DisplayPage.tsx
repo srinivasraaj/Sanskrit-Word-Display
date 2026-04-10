@@ -183,8 +183,8 @@ function drawCanvasFrame(
   if (maxChars > charThreshold) {
     longWordScale = Math.max(0.5, charThreshold / maxChars);
   }
-  const rowScale = ROWS > 3 ? Math.max(0.55, 3 / ROWS) : 1;
-  const fontScale = Math.min(rowScale, longWordScale);
+  const rowScale = ROWS > 3 ? 0.7 : 1;
+  const fontScale = Math.max(0.7, Math.min(rowScale, longWordScale));
   const WF = Math.max(10, ds.previousFontSize * fontScale);
   const WFA = Math.max(10, ds.highlightedFontSize * fontScale);
   const rowGap = Math.max(Math.max(WF, WFA) * 2.4, ROWS > 3 ? 36 : 56);
@@ -2054,8 +2054,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   if (maxChars > charThreshold) {
                     longWordScale = Math.max(0.5, charThreshold / maxChars);
                   }
-                  const rowScale = ROWS_PER_COL > 3 ? Math.max(0.55, 3 / ROWS_PER_COL) : 1;
-                  const fontScale = Math.min(rowScale, longWordScale);
+                  const rowScale = ROWS_PER_COL > 3 ? 0.7 : 1;
+                  const fontScale = Math.max(0.7, Math.min(rowScale, longWordScale));
                   const scaledPrev = previousFontSize * fontScale;
                   const scaledHL = highlightedFontSize * fontScale;
                   const gapClass = ROWS_PER_COL > 4 ? "gap-4" : ROWS_PER_COL > 3 ? "gap-10" : "gap-24";
