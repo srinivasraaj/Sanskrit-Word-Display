@@ -483,8 +483,12 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     const ts = timestampsRef.current;
     const ahead = t + playbackOffsetRef.current;
     if (ts.length > 0) {
-      for (let i = ts.length - 1; i >= 0; i--) {
-        if (ts[i] != null && ahead >= ts[i]) { active = i; break; }
+      let bestTime = -Infinity;
+      for (let i = 0; i < ts.length; i++) {
+        if (ts[i] != null && ahead >= ts[i] && (ts[i] as number) > bestTime) {
+          bestTime = ts[i] as number;
+          active = i;
+        }
       }
     }
     if (active !== lastActiveRef.current) {
