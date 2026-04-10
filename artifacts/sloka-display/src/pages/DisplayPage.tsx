@@ -705,12 +705,14 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     let idx = timingIndexRef.current;
     const t = Math.max(0, audio.currentTime - 1);
     const next = [...timestampsRef.current];
+    const wasAlreadyMarked = next[idx] !== undefined && next[idx] !== null;
     next[idx] = t;
-    // Advance past already-marked positions but stay within the current cycle
     const cycleEnd = (Math.floor(idx / numWords) + 1) * numWords;
     let nextIdx = idx + 1;
-    while (nextIdx < cycleEnd && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
-      nextIdx++;
+    if (!wasAlreadyMarked) {
+      while (nextIdx < cycleEnd && next[nextIdx] !== undefined && (next[nextIdx] as unknown) !== null) {
+        nextIdx++;
+      }
     }
     timestampsRef.current = next;
     timingIndexRef.current = nextIdx;
