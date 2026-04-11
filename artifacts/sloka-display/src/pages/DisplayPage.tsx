@@ -50,35 +50,20 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   const measured = ctx.measureText(text).width;
   if (measured <= maxWidth) return [text];
   const words = text.split(" ");
-  if (words.length > 1) {
-    const lines: string[] = [];
-    let cur = words[0];
-    for (let i = 1; i < words.length; i++) {
-      const test = cur + " " + words[i];
-      if (ctx.measureText(test).width > maxWidth && cur) {
-        lines.push(cur);
-        cur = words[i];
-      } else {
-        cur = test;
-      }
-    }
-    if (cur) lines.push(cur);
-    return lines.length > 0 ? lines : [text];
-  }
-  const chars = [...text];
+  if (words.length <= 1) return [text];
   const lines: string[] = [];
-  let cur = "";
-  for (const ch of chars) {
-    const test = cur + ch;
+  let cur = words[0];
+  for (let i = 1; i < words.length; i++) {
+    const test = cur + " " + words[i];
     if (ctx.measureText(test).width > maxWidth && cur) {
       lines.push(cur);
-      cur = ch;
+      cur = words[i];
     } else {
       cur = test;
     }
   }
   if (cur) lines.push(cur);
-  return lines;
+  return lines.length > 0 ? lines : [text];
 }
 
 function drawCanvasFrame(
