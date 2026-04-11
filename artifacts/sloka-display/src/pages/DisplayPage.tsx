@@ -49,6 +49,22 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   if (maxWidth <= 0) return [text];
   const measured = ctx.measureText(text).width;
   if (measured <= maxWidth) return [text];
+  const words = text.split(" ");
+  if (words.length > 1) {
+    const lines: string[] = [];
+    let cur = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const test = cur + " " + words[i];
+      if (ctx.measureText(test).width > maxWidth && cur) {
+        lines.push(cur);
+        cur = words[i];
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines.length > 0 ? lines : [text];
+  }
   const chars = [...text];
   const lines: string[] = [];
   let cur = "";
@@ -2108,8 +2124,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                 transition: "font-size 250ms cubic-bezier(0.4,0,0.2,1), color 250ms cubic-bezier(0.4,0,0.2,1)",
                                 textShadow: "none",
                                 fontWeight: isActive ? "700" : "400",
-                                overflowWrap: "break-word",
-                                wordBreak: "break-word",
+                                overflowWrap: "normal",
+                                wordBreak: "normal",
                                 willChange: "transform, color",
                               }}>
                               <span className="inline-block mr-1 shrink-0"
