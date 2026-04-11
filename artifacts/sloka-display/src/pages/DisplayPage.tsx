@@ -1293,20 +1293,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           return null;
         };
         const loaded: number[] = json.timestamps.map((t: unknown) => parseTs(t)!);
-        if (json.words && Array.isArray(json.words)) {
-          const loadedWords: string[] = json.words;
-          const configFlat = groups.flatMap(g => g.words);
-          const configTotal = configFlat.length;
-          if (loadedWords.length !== configTotal) {
-            alert(
-              `Warning: The marker file has ${loadedWords.length} words but your current config has ${configTotal} words.\n\n` +
-              `The marker file was saved with a different word setup. ` +
-              `Nothing will be loaded — please update your config or marker file so the word counts match, then try again.`
-            );
-            e.target.value = "";
-            return;
-          }
-        }
         const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
         const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
         timestampsRef.current = loaded;
@@ -1320,12 +1306,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
           const loadedWords: string[] = json.words;
-          let hasGroupCounts = false;
           if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
             const gwc: number[] = json.groupWordCounts;
             const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
             if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
-              hasGroupCounts = true;
               let offset = 0;
               const updatedGroups = groups.map((g, gi) => {
                 const count = gwc[gi];
@@ -1337,9 +1321,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               setLocalItems(newFlat);
               localItemsLenRef.current = newFlat.length;
               groupsRef.current = updatedGroups;
+            } else {
+              setLocalItems(loadedWords);
+              localItemsLenRef.current = loadedWords.length;
             }
-          }
-          if (!hasGroupCounts) {
+          } else {
             setLocalItems(loadedWords);
             localItemsLenRef.current = loadedWords.length;
           }
@@ -1390,7 +1376,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             );
           }
         }
-      } catch (_err) {
+      } catch {
         alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
       }
     };
