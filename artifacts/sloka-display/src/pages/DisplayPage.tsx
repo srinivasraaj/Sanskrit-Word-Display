@@ -1112,7 +1112,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         ? "video/webm"
         : "video/mp4";
 
-      const recorder = new MediaRecorder(combinedStream, { mimeType });
+      const recorder = new MediaRecorder(combinedStream, { mimeType, audioBitsPerSecond: 128000, videoBitsPerSecond: 5000000 });
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
@@ -1138,7 +1138,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       _canvasUnhighlightStartTime = 0;
 
       mediaRecorderRef.current = recorder;
-      recorder.start(100);
+      recorder.start();
       isRecordingRef.current = true;
       setIsRecording(true);
       setRecordingTime(0);
