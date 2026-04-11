@@ -1292,44 +1292,66 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           }
           return null;
         };
-        const loaded: number[] = json.timestamps.map((t: unknown) => parseTs(t)!);
-        const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
-        const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
-        timestampsRef.current = loaded;
+        const rawLoaded: (number | null)[] = json.timestamps.map((t: unknown) => parseTs(t));
+        const markerWords: string[] = json.words && Array.isArray(json.words) ? json.words : [];
+        const currentWords = localItems;
+        const nCurrent = currentWords.length;
+        const nMarker = markerWords.length;
+
+        let mappedTimestamps: (number | null)[];
+
+        if (nMarker > 0 && nCurrent > 0 && nMarker !== nCurrent) {
+          const markerWordsPerCycle = nMarker;
+          const numCycles = rawLoaded.length > 0 ? Math.ceil(rawLoaded.length / markerWordsPerCycle) : 1;
+
+          mappedTimestamps = [];
+          for (let cycle = 0; cycle < numCycles; cycle++) {
+            const markerCycleStart = cycle * nMarker;
+            const usedMarkerIndices = new Set<number>();
+
+            for (let ci = 0; ci < nCurrent; ci++) {
+              const word = currentWords[ci];
+              let bestIdx = -1;
+              for (let mi = 0; mi < nMarker; mi++) {
+                if (usedMarkerIndices.has(mi)) continue;
+                if (markerWords[mi] === word) {
+                  bestIdx = mi;
+                  break;
+                }
+              }
+              if (bestIdx >= 0) {
+                usedMarkerIndices.add(bestIdx);
+                const tsIdx = markerCycleStart + bestIdx;
+                mappedTimestamps.push(tsIdx < rawLoaded.length ? rawLoaded[tsIdx] : null);
+              } else {
+                mappedTimestamps.push(null);
+              }
+            }
+          }
+
+          const skippedWords = markerWords.filter(w => !currentWords.includes(w));
+          const addedWords = currentWords.filter(w => !markerWords.includes(w));
+          if (skippedWords.length > 0 || addedWords.length > 0) {
+            const parts: string[] = [];
+            if (skippedWords.length > 0) parts.push(`Skipped timestamps for ${skippedWords.length} removed word(s): ${skippedWords.join(", ")}`);
+            if (addedWords.length > 0) parts.push(`${addedWords.length} new word(s) have no timestamps yet: ${addedWords.join(", ")}`);
+            alert("Marker file word mismatch resolved:\n\n" + parts.join("\n"));
+          }
+        } else {
+          mappedTimestamps = rawLoaded;
+        }
+
+        const firstUnmarked = mappedTimestamps.findIndex((t) => t === null || t === undefined);
+        const timingIdx = firstUnmarked === -1 ? mappedTimestamps.length : firstUnmarked;
+        timestampsRef.current = mappedTimestamps as number[];
         timingIndexRef.current = timingIdx;
-        setTimestamps(loaded);
+        setTimestamps(mappedTimestamps as number[]);
         setTimingIndex(timingIdx);
         lastActiveRef.current = -1;
         lastClearedIdxRef.current = null;
         lastWordHitTimeRef.current = -1;
         setHighlightCleared(false);
         setCurrentIndex(-1);
-        if (json.words && Array.isArray(json.words)) {
-          const loadedWords: string[] = json.words;
-          if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
-            const gwc: number[] = json.groupWordCounts;
-            const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
-            if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
-              let offset = 0;
-              const updatedGroups = groups.map((g, gi) => {
-                const count = gwc[gi];
-                const newWords = loadedWords.slice(offset, offset + count);
-                offset += count;
-                return { ...g, words: newWords };
-              });
-              const newFlat = updatedGroups.flatMap(g => g.words);
-              setLocalItems(newFlat);
-              localItemsLenRef.current = newFlat.length;
-              groupsRef.current = updatedGroups;
-            } else {
-              setLocalItems(loadedWords);
-              localItemsLenRef.current = loadedWords.length;
-            }
-          } else {
-            setLocalItems(loadedWords);
-            localItemsLenRef.current = loadedWords.length;
-          }
-        }
         if (json.overlays && Array.isArray(json.overlays)) {
           setOverlays(json.overlays.map((ov: any) => ({
             ...ov,
