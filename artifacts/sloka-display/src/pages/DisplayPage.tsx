@@ -1293,6 +1293,21 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           return null;
         };
         const loaded: number[] = json.timestamps.map((t: unknown) => parseTs(t)!);
+        let wordCountMismatch = false;
+        if (json.words && Array.isArray(json.words)) {
+          const loadedWords: string[] = json.words;
+          const configFlat = groups.flatMap(g => g.words);
+          const configTotal = configFlat.length;
+          if (loadedWords.length !== configTotal) {
+            wordCountMismatch = true;
+            alert(
+              `Warning: The marker file has ${loadedWords.length} words but your current config has ${configTotal} words.\n\n` +
+              `The marker file was saved with a different word setup. ` +
+              `Nothing will be loaded — please update your config or marker file so the word counts match, then try again.`
+            );
+          }
+        }
+        if (!wordCountMismatch) {
         const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
         const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
         timestampsRef.current = loaded;
@@ -1306,17 +1321,6 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
           const loadedWords: string[] = json.words;
-          const configFlat = groups.flatMap(g => g.words);
-          const configTotal = configFlat.length;
-          if (loadedWords.length !== configTotal) {
-            const mismatchCount = loadedWords.reduce((n, w, i) => n + (i < configTotal && w !== configFlat[i] ? 1 : 0), 0);
-            alert(
-              `Warning: The marker file has ${loadedWords.length} words but your current config has ${configTotal} words.\n\n` +
-              `${mismatchCount} word(s) are different. The words from your config will be kept.\n\n` +
-              `Only timestamps, overlays, and transition times will be loaded from the marker file. ` +
-              `You may need to re-mark some words if the order has changed.`
-            );
-          } else {
             let hasGroupCounts = false;
             if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
               const gwc: number[] = json.groupWordCounts;
@@ -1387,6 +1391,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
               `Make sure you load the same audio before playback, otherwise timestamps may not match.`
             );
           }
+        }
         }
       } catch {
         alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
