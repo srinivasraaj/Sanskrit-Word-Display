@@ -2122,12 +2122,11 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   const scaledHL = highlightedFontSize * fontScale;
                   const gapClass = ROWS_PER_COL > 4 ? "gap-4" : ROWS_PER_COL > 3 ? "gap-10" : "gap-24";
                   const numCols = Math.ceil(wc / ROWS_PER_COL);
-                  const colWidthPct = numCols > 0 ? `${100 / numCols}%` : "100%";
                   return Array.from({ length: numCols }, (_, colIdx) => {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
-                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className={`flex flex-col ${gapClass} shrink-0`}
-                        style={{ width: colWidthPct, minWidth: 0 }}>
+                      <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className={`flex flex-col ${gapClass}`}
+                        style={{ flex: '1 1 0%' }}>
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
