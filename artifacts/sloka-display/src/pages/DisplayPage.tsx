@@ -250,7 +250,12 @@ function drawCanvasFrame(
   const highlightRGB = parseHexColor(ds.highlightColor);
   const pastRGB = parseHexColor(ds.pastWordColor);
 
-  const colWidth = numCols > 0 ? (W * 0.95) / numCols : W * 0.95;
+  const defaultColWidth = numCols > 0 ? (W * 0.95) / numCols : W * 0.95;
+  const colWidths: number[] = [];
+  for (let c = 0; c < numCols; c++) {
+    const nextX = c + 1 < rColX.length ? rColX[c + 1] : W * 0.975;
+    colWidths.push(nextX - rColX[c]);
+  }
 
   for (let i = 0; i < ds.groupWords.length; i++) {
     const globalIdx = ds.groupStart + i;
@@ -265,6 +270,7 @@ function drawCanvasFrame(
     const x = rColX[col];
     if (x > W - SAFE_RIGHT) continue;
     const y = wordsY + row * rowGap;
+    const colWidth = colWidths[col] ?? defaultColWidth;
     const maxTextW = colWidth - arrowW - 4;
 
     if (isActive) {
@@ -2126,7 +2132,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
                       <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className={`flex flex-col ${gapClass}`}
-                        style={{ flex: '1 1 0%' }}>
+                        style={{ flex: '1 1 auto' }}>
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
