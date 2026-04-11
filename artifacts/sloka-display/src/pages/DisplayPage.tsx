@@ -2149,7 +2149,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                               }}>
                               <span className="inline-block mr-1 shrink-0"
                                 style={{ color: highlightColor, opacity: isActive ? 0.85 : 0, minWidth: "0.8em", transition: "opacity 250ms cubic-bezier(0.4,0,0.2,1)", marginTop: "0.15em", fontSize: `${Math.max(10, scaledPrev * 0.7)}px` }}>▶</span>
-                              <span style={{ minWidth: 0 }}>{item}</span>
+                              <span style={{ whiteSpace: 'nowrap' }}>{item}</span>
                             </div>
                           );
                         })}
