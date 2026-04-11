@@ -2112,12 +2112,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                   const scaledHL = highlightedFontSize * fontScale;
                   const gapClass = ROWS_PER_COL > 4 ? "gap-4" : ROWS_PER_COL > 3 ? "gap-10" : "gap-24";
                   const numCols = Math.ceil(wc / ROWS_PER_COL);
-                  const colMaxChars: number[] = Array.from({ length: numCols }, (_, colIdx) => {
+                  const colWeights: number[] = Array.from({ length: numCols }, (_, colIdx) => {
                     const colWords = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
-                    return colWords.reduce((m, w) => Math.max(m, [...w].length), 1);
+                    const maxLen = colWords.reduce((m, w) => Math.max(m, [...w].length), 1);
+                    return maxLen * scaledHL;
                   });
-                  const totalChars = colMaxChars.reduce((a, b) => a + b, 0);
-                  const colWidthPcts = colMaxChars.map(c => totalChars > 0 ? `${(c / totalChars) * 100}%` : `${100 / numCols}%`);
+                  const totalWeight = colWeights.reduce((a, b) => a + b, 0);
+                  const colWidthPcts = colWeights.map(w => totalWeight > 0 ? `${(w / totalWeight) * 100}%` : `${100 / numCols}%`);
                   return Array.from({ length: numCols }, (_, colIdx) => {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
