@@ -1293,21 +1293,20 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
           return null;
         };
         const loaded: number[] = json.timestamps.map((t: unknown) => parseTs(t)!);
-        let wordCountMismatch = false;
         if (json.words && Array.isArray(json.words)) {
           const loadedWords: string[] = json.words;
           const configFlat = groups.flatMap(g => g.words);
           const configTotal = configFlat.length;
           if (loadedWords.length !== configTotal) {
-            wordCountMismatch = true;
             alert(
               `Warning: The marker file has ${loadedWords.length} words but your current config has ${configTotal} words.\n\n` +
               `The marker file was saved with a different word setup. ` +
               `Nothing will be loaded — please update your config or marker file so the word counts match, then try again.`
             );
+            e.target.value = "";
+            return;
           }
         }
-        if (!wordCountMismatch) {
         const firstUnmarked = loaded.findIndex((t) => t === null || t === undefined);
         const timingIdx = firstUnmarked === -1 ? loaded.length : firstUnmarked;
         timestampsRef.current = loaded;
@@ -1321,29 +1320,28 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
           const loadedWords: string[] = json.words;
-            let hasGroupCounts = false;
-            if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
-              const gwc: number[] = json.groupWordCounts;
-              const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
-              if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
-                hasGroupCounts = true;
-                let offset = 0;
-                const updatedGroups = groups.map((g, gi) => {
-                  const count = gwc[gi];
-                  const newWords = loadedWords.slice(offset, offset + count);
-                  offset += count;
-                  return { ...g, words: newWords };
-                });
-                const newFlat = updatedGroups.flatMap(g => g.words);
-                setLocalItems(newFlat);
-                localItemsLenRef.current = newFlat.length;
-                groupsRef.current = updatedGroups;
-              }
+          let hasGroupCounts = false;
+          if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
+            const gwc: number[] = json.groupWordCounts;
+            const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
+            if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
+              hasGroupCounts = true;
+              let offset = 0;
+              const updatedGroups = groups.map((g, gi) => {
+                const count = gwc[gi];
+                const newWords = loadedWords.slice(offset, offset + count);
+                offset += count;
+                return { ...g, words: newWords };
+              });
+              const newFlat = updatedGroups.flatMap(g => g.words);
+              setLocalItems(newFlat);
+              localItemsLenRef.current = newFlat.length;
+              groupsRef.current = updatedGroups;
             }
-            if (!hasGroupCounts) {
-              setLocalItems(loadedWords);
-              localItemsLenRef.current = loadedWords.length;
-            }
+          }
+          if (!hasGroupCounts) {
+            setLocalItems(loadedWords);
+            localItemsLenRef.current = loadedWords.length;
           }
         }
         if (json.overlays && Array.isArray(json.overlays)) {
@@ -1392,8 +1390,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             );
           }
         }
-        }
-      } catch {
+      } catch (_err) {
         alert("Could not read markers file. Make sure it is a valid sloka-markers.json.");
       }
     };
