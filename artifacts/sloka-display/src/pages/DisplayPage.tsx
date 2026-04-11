@@ -1306,28 +1306,40 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         setCurrentIndex(-1);
         if (json.words && Array.isArray(json.words)) {
           const loadedWords: string[] = json.words;
-          if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
-            const gwc: number[] = json.groupWordCounts;
-            const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
-            if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
-              let offset = 0;
-              const updatedGroups = groups.map((g, gi) => {
-                const count = gwc[gi];
-                const newWords = loadedWords.slice(offset, offset + count);
-                offset += count;
-                return { ...g, words: newWords };
-              });
-              const newFlat = updatedGroups.flatMap(g => g.words);
-              setLocalItems(newFlat);
-              localItemsLenRef.current = newFlat.length;
-              groupsRef.current = updatedGroups;
-            } else {
+          const configFlat = groups.flatMap(g => g.words);
+          const configTotal = configFlat.length;
+          if (loadedWords.length !== configTotal) {
+            const mismatchCount = loadedWords.reduce((n, w, i) => n + (i < configTotal && w !== configFlat[i] ? 1 : 0), 0);
+            alert(
+              `Warning: The marker file has ${loadedWords.length} words but your current config has ${configTotal} words.\n\n` +
+              `${mismatchCount} word(s) are different. The words from your config will be kept.\n\n` +
+              `Only timestamps, overlays, and transition times will be loaded from the marker file. ` +
+              `You may need to re-mark some words if the order has changed.`
+            );
+          } else {
+            let hasGroupCounts = false;
+            if (json.groupWordCounts && Array.isArray(json.groupWordCounts)) {
+              const gwc: number[] = json.groupWordCounts;
+              const totalFromGroups = gwc.reduce((a: number, b: number) => a + b, 0);
+              if (totalFromGroups === loadedWords.length && gwc.length === groups.length) {
+                hasGroupCounts = true;
+                let offset = 0;
+                const updatedGroups = groups.map((g, gi) => {
+                  const count = gwc[gi];
+                  const newWords = loadedWords.slice(offset, offset + count);
+                  offset += count;
+                  return { ...g, words: newWords };
+                });
+                const newFlat = updatedGroups.flatMap(g => g.words);
+                setLocalItems(newFlat);
+                localItemsLenRef.current = newFlat.length;
+                groupsRef.current = updatedGroups;
+              }
+            }
+            if (!hasGroupCounts) {
               setLocalItems(loadedWords);
               localItemsLenRef.current = loadedWords.length;
             }
-          } else {
-            setLocalItems(loadedWords);
-            localItemsLenRef.current = loadedWords.length;
           }
         }
         if (json.overlays && Array.isArray(json.overlays)) {
