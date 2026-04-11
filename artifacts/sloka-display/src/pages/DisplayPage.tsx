@@ -2123,7 +2123,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                     const colItems = displayGroupWords.slice(colIdx * ROWS_PER_COL, (colIdx + 1) * ROWS_PER_COL);
                     return (
                       <div key={`${displayGroup}-${colIdx}`} ref={(el) => { colDivRefs.current[colIdx] = el; }} className={`flex flex-col ${gapClass}`}
-                        style={{ width: colWidthPcts[colIdx], minWidth: 'max-content' }}>
+                        style={{ width: colWidthPcts[colIdx], minWidth: 0, overflow: 'visible' }}>
                         {colItems.map((_, rowIdx) => {
                           const globalIdx = displayGroupStart + colIdx * ROWS_PER_COL + rowIdx;
                           const item = localItems[globalIdx];
@@ -2144,6 +2144,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
                                 fontWeight: isActive ? "700" : "400",
                                 overflowWrap: "normal",
                                 wordBreak: "normal",
+                                whiteSpace: "nowrap",
                                 willChange: "transform, color",
                               }}>
                               <span className="inline-block mr-1 shrink-0"
