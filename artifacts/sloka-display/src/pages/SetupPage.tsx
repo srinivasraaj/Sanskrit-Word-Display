@@ -165,7 +165,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
               onChange={(e) => setSlokaText(e.target.value)}
               placeholder="Enter each line of the sloka on a new line…"
               className="border-amber-200 text-amber-900 bg-white font-serif min-h-[120px] resize-y"
-              style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}
+              style={{ fontFamily: "'Noto Serif Telugu', 'Noto Sans Telugu', 'Mandali', Georgia, serif" }}
             />
             {slokaLines.length > 0 && (
               <p className="text-xs text-amber-600 mt-1">
@@ -188,7 +188,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                     <div className="mt-1 space-y-0.5">
                       {groupLines.map((line, li) => (
                         <p key={li} className="text-amber-700 text-xs leading-snug"
-                          style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}>
+                          style={{ fontFamily: "'Noto Serif Telugu', 'Noto Sans Telugu', 'Mandali', Georgia, serif" }}>
                           {line}
                         </p>
                       ))}
@@ -205,7 +205,7 @@ export default function SetupPage({ onStart, initialDraft }: SetupPageProps) {
                     }}
                     placeholder="One word per line…"
                     className="border-amber-200 text-amber-900 bg-white font-serif min-h-[100px] resize-y text-sm"
-                    style={{ fontFamily: "'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif" }}
+                    style={{ fontFamily: "'Noto Serif Telugu', 'Noto Sans Telugu', 'Mandali', Georgia, serif" }}
                   />
                 </CardContent>
               </Card>

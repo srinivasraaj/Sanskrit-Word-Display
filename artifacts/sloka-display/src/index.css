@@ -109,7 +109,7 @@
   --chart-5: 10 65% 50%;
 
   --app-font-sans: 'Inter', sans-serif;
-  --app-font-serif: 'Noto Sans Telugu', 'Noto Serif Telugu', 'Mandali', Georgia, serif;
+  --app-font-serif: 'Noto Serif Telugu', 'Noto Sans Telugu', 'Mandali', Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: .5rem;
   --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.05);
