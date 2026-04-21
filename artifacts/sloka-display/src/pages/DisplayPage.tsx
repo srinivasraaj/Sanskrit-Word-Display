@@ -1052,10 +1052,10 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     setPhase("timing");
   };
 
-  const startPlayback = () => {
+  const startPlayback = (resumeFromCurrentTime = false) => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = 0;
+    if (!resumeFromCurrentTime) audio.currentTime = 0;
     lastActiveRef.current = -1;
     lastDisplayGroupRef.current = 0;
     lastClearedIdxRef.current = null;
@@ -1176,7 +1176,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       recordingTimerRef.current = window.setInterval(() => setRecordingTime((t) => t + 1), 1000);
 
       drawCanvasFrame(canvas, -1, displayStateRef.current, 0);
-      setTimeout(() => startPlayback(), 500);
+      const resume = startSeconds > 0;
+      setTimeout(() => startPlayback(resume), 500);
     } catch (err) {
       alert("Recording failed: " + err);
     }
