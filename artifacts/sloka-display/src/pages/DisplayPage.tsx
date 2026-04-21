@@ -317,6 +317,9 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const audioDestNodeRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const recordingTimerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const wordListRef = useRef<HTMLDivElement>(null);
@@ -1085,7 +1088,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   };
 
-  const startRecording = async () => {
+  const startRecordingAt = async (startSeconds: number) => {
     try {
       // Wait for all fonts (including Telugu) to finish loading before
       // measuring or rendering — prevents layout shift on first frames.
@@ -1093,11 +1096,38 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
 
       const canvas = canvasRef.current;
       if (!canvas) { alert("Canvas not ready. Please try again."); return; }
+      const audio = audioRef.current;
+      if (!audio) { alert("Audio not ready. Please try again."); return; }
 
       const videoStream = canvas.captureStream(30);
-      const audioEl = audioRef.current as any;
-      const audioStream: MediaStream | null =
-        typeof audioEl?.captureStream === "function" ? audioEl.captureStream() : null;
+
+      // Use Web Audio API for a jitter-free audio stream. Routing through
+      // an AudioContext + MediaStreamAudioDestinationNode produces a stable
+      // stream that doesn't stall when the main thread is briefly busy
+      // (which causes the "audio jamming" you hear with audio.captureStream()).
+      let audioStream: MediaStream | null = null;
+      try {
+        if (!audioCtxRef.current) {
+          const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+          audioCtxRef.current = new Ctx();
+        }
+        const ctx = audioCtxRef.current!;
+        if (ctx.state === "suspended") await ctx.resume();
+        if (!audioSourceNodeRef.current) {
+          // createMediaElementSource can only be called ONCE per element — cache it.
+          audioSourceNodeRef.current = ctx.createMediaElementSource(audio);
+          audioSourceNodeRef.current.connect(ctx.destination); // keep speakers playing
+        }
+        if (!audioDestNodeRef.current) {
+          audioDestNodeRef.current = ctx.createMediaStreamDestination();
+          audioSourceNodeRef.current.connect(audioDestNodeRef.current);
+        }
+        audioStream = audioDestNodeRef.current.stream;
+      } catch {
+        // Fallback to direct element capture if Web Audio fails
+        const audioEl = audio as any;
+        audioStream = typeof audioEl?.captureStream === "function" ? audioEl.captureStream() : null;
+      }
 
       const combinedTracks = [
         ...videoStream.getVideoTracks(),
@@ -1120,8 +1150,8 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       };
 
-      const audio = audioRef.current;
-      if (audio) { audio.pause(); audio.currentTime = 0; }
+      audio.pause();
+      audio.currentTime = Math.max(0, startSeconds);
       lastActiveRef.current = -1;
       lastDisplayGroupRef.current = 0;
       lastClearedIdxRef.current = null;
@@ -1129,7 +1159,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       setHighlightCleared(false);
       setCurrentIndex(-1);
       setDisplayGroup(0);
-      setAudioCurrentTime(0);
+      setAudioCurrentTime(audio.currentTime);
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
       _canvasPrevActiveIdx = -1;
@@ -1142,6 +1172,7 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
       isRecordingRef.current = true;
       setIsRecording(true);
       setRecordingTime(0);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = window.setInterval(() => setRecordingTime((t) => t + 1), 1000);
 
       drawCanvasFrame(canvas, -1, displayStateRef.current, 0);
@@ -1149,6 +1180,31 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
     } catch (err) {
       alert("Recording failed: " + err);
     }
+  };
+
+  const startRecording = () => startRecordingAt(0);
+
+  const restartRecordingBack10 = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const back = Math.max(0, audio.currentTime - 10);
+    // Stop current recorder cleanly without triggering save dialog
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      try {
+        rec.onstop = () => {
+          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        };
+        rec.stop();
+      } catch {}
+    }
+    chunksRef.current = [];
+    setRecordedBlob(null);
+    audio.pause();
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    // Brief delay so the previous MediaRecorder fully shuts down before starting fresh
+    await new Promise((r) => setTimeout(r, 150));
+    await startRecordingAt(back);
   };
 
   const stopRecording = () => {
@@ -1925,6 +1981,13 @@ export default function DisplayPage({ data, onBack }: DisplayPageProps) {
             <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             REC {Math.floor(recordingTime / 60).toString().padStart(2, "0")}:{(recordingTime % 60).toString().padStart(2, "0")}
           </span>
+          <button
+            onClick={restartRecordingBack10}
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg transition-colors"
+            title="Discard and restart recording from 10 seconds before current position"
+          >
+            ↺ Restart -10s
+          </button>
           <button
             onClick={stopAndSaveRecording}
             className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg transition-colors"
